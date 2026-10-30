@@ -1,0 +1,14 @@
+# Credenciales: nunca se suben. Solo se versiona .env.example
+.env
+
+# Entorno virtual y dependencias instaladas
+.venv/
+
+# Archivos generados por Python
+__pycache__/
+*.pyc
+
+# Archivos locales del sistema y del editor
+.DS_Store
+.vscode/
+.idea/
