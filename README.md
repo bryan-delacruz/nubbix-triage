@@ -93,7 +93,7 @@ flowchart LR
     B -- ok --> C[Caché MD5]
     C -- hit --> H[Respuesta]
     C -- miss --> D[Prompt YAML]
-    D --> E[LLMProvider<br/>OpenAI / Anthropic]
+    D --> E[LLMProvider<br/>Gemini / Anthropic]
     E --> F{Validación Pydantic}
     F -- inválido --> R[Reintento con el error] --> E
     F -- válido --> G{Guardrail de salida}
@@ -111,7 +111,7 @@ flowchart TB
     triage --> guard[src/guardrails.py]
     triage --> prompts[src/prompts.py] --> yaml[(prompts/*.yaml)]
     triage --> base[src/providers/base.py<br/>LLMProvider]
-    base --> oa[openai_provider.py]
+    base --> ge[gemini_provider.py]
     base --> an[anthropic_provider.py]
     triage --> schemas[src/schemas.py<br/>TriageResponse]
     triage --> metrics[src/metrics.py] --> pricing[src/pricing.py]
@@ -139,7 +139,8 @@ flowchart TB
 | Decisión | Elección | Motivo |
 |---|---|---|
 | Lenguaje | Python 3.12 | Pydantic y los SDK oficiales de ambos proveedores |
-| Proveedores | OpenAI y Anthropic | Dos SDK oficiales con APIs distintas: obligan a una abstracción real |
+| Proveedores | Gemini y Anthropic | Dos SDK oficiales con APIs distintas: obligan a una abstracción real |
+| Modelos | `gemini-3.1-flash-lite` y `claude-haiku-5-5` | Los más económicos y vigentes de cada marca (verificado el 2026-10-29). Gemini tiene capa gratuita: las pruebas cuestan $0. Se descartó `gpt-5-nano` porque OpenAI lo apaga el 2026-12-11 |
 | Abstracción | Interfaz mínima `LLMProvider` | Cambiar de proveedor sin tocar la lógica de negocio, sin armar un framework |
 | Validación | Pydantic + reintento con el error | El modelo no siempre respeta el contrato; el error le indica qué corregir |
 | Prompts | Archivos YAML versionados | El prompt se trata como código y se compara con datos |
@@ -164,7 +165,7 @@ flowchart TB
 │   ├── cache.py
 │   └── providers/
 │       ├── base.py
-│       ├── openai_provider.py
+│       ├── gemini_provider.py
 │       └── anthropic_provider.py
 ├── prompts/
 │   ├── v1_zero_shot.yaml
@@ -205,9 +206,9 @@ El proyecto se construye en 20 commits chicos. Cada commit agrega una sola pieza
 | 2 | `chore: configuración por variables de entorno` |
 | 3 | `feat: contrato TriageResponse con Pydantic` |
 | 4 | `feat: interfaz LLMProvider` |
-| 5 | `feat: proveedor Anthropic` |
+| 5 | `feat: proveedor Gemini` |
 | 6 | `feat: CLI básica de triage` |
-| 7 | `feat: proveedor OpenAI y selección por --provider` |
+| 7 | `feat: proveedor Anthropic y selección por --provider` |
 | 8 | `feat: reintento ante JSON inválido` |
 | 9 | `feat: manejo de errores de API` |
 | 10 | `feat: tabla de precios por modelo` |
