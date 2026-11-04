@@ -168,8 +168,8 @@ flowchart TB
 │       ├── gemini_provider.py
 │       └── anthropic_provider.py
 ├── prompts/
-│   ├── v1_zero_shot.yaml
-│   └── v2_few_shot.yaml
+│   ├── v1.yaml          # zero-shot (línea base)
+│   └── v2.yaml          # few-shot + reglas
 ├── evals/
 │   ├── dataset.jsonl
 │   ├── adversarial.jsonl

@@ -1,6 +1,5 @@
 """Orquestación del triage: consulta -> prompt -> LLM -> JSON validado -> métricas."""
 
-import json
 import sys
 import time
 from dataclasses import dataclass
@@ -9,24 +8,11 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from src.metrics import METRICS_PATH, build_record, log_request
+from src.prompts import Prompt
 from src.providers.base import LLMError, LLMProvider
 from src.schemas import TriageResponse
 
-MAX_TOKENS = 1024
 MAX_ATTEMPTS = 3  # 1 intento + 2 reintentos
-
-# Prompt provisorio: en el commit 12 se mueve a prompts/*.yaml y se versiona.
-SYSTEM_PROMPT = f"""Eres el asistente de soporte de nivel 1 de Nubbix, un SaaS de gestión para pymes de LATAM.
-Clasifica la consulta del cliente, redacta una respuesta breve y sugiere acciones para el agente humano.
-
-Categorías:
-- billing: cobros, pagos, facturas, suscripción, reintegros
-- technical: errores, fallas, caídas, integraciones
-- account: usuarios, permisos, datos o acceso a la cuenta
-- other: cualquier otra consulta
-
-Responde SOLO con un objeto JSON que cumpla este JSON Schema, sin texto adicional:
-{json.dumps(TriageResponse.model_json_schema(), ensure_ascii=False)}"""
 
 
 @dataclass
@@ -89,7 +75,12 @@ def fallback_response(reason: str) -> TriageResponse:
     )
 
 
-def triage(query: str, provider: LLMProvider, metrics_path: Path | None = METRICS_PATH) -> TriageResult:
+def triage(
+    query: str,
+    provider: LLMProvider,
+    prompt: Prompt,
+    metrics_path: Path | None = METRICS_PATH,
+) -> TriageResult:
     """Clasifica una consulta y registra una línea de métricas.
 
     Si el modelo no respeta el contrato, reintenta mostrándole los errores.
@@ -104,7 +95,7 @@ def triage(query: str, provider: LLMProvider, metrics_path: Path | None = METRIC
     try:
         while result is None:
             attempts += 1
-            llm_response = provider.complete(system=SYSTEM_PROMPT, user=user_message, max_tokens=MAX_TOKENS)
+            llm_response = provider.complete(system=prompt.system, user=user_message, max_tokens=prompt.max_tokens)
             input_tokens += llm_response.input_tokens
             output_tokens += llm_response.output_tokens
             try:
@@ -131,6 +122,7 @@ def triage(query: str, provider: LLMProvider, metrics_path: Path | None = METRIC
         record = build_record(
             provider=provider.name,
             model=provider.model,
+            prompt_version=prompt.version,
             status=result.status,
             attempts=result.attempts,
             # La categoría del respaldo ("other") no la eligió el modelo: no la registramos.
@@ -144,7 +136,10 @@ def triage(query: str, provider: LLMProvider, metrics_path: Path | None = METRIC
 
 
 if __name__ == "__main__":
+    from src.prompts import DEFAULT_PROMPT_VERSION, load_prompt
     from src.providers.base import LLMResponse
+
+    prompt = load_prompt(DEFAULT_PROMPT_VERSION)
 
     class FlakyProvider(LLMProvider):
         """Proveedor simulado: devuelve respuestas inválidas antes de una válida."""
@@ -166,11 +161,11 @@ if __name__ == "__main__":
     bad_contract = '{"answer": "Revisamos tu cobro.", "confidence": 1.5, "category": "ventas", "actions": []}'
 
     print("== Caso 1: falla 2 veces y se recupera al tercer intento ==")
-    result = triage("me cobraron dos veces", FlakyProvider([not_json, bad_contract, valid]), metrics_path=None)
+    result = triage("me cobraron dos veces", FlakyProvider([not_json, bad_contract, valid]), prompt, metrics_path=None)
     print(f"status={result.status} attempts={result.attempts} tokens={result.input_tokens}+{result.output_tokens}")
     print(result.response)
 
     print("\n== Caso 2: falla los 3 intentos ==")
-    result = triage("me cobraron dos veces", FlakyProvider([not_json, bad_contract, not_json]), metrics_path=None)
+    result = triage("me cobraron dos veces", FlakyProvider([not_json, bad_contract, not_json]), prompt, metrics_path=None)
     print(f"status={result.status} attempts={result.attempts} tokens={result.input_tokens}+{result.output_tokens}")
     print(result.response)

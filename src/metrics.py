@@ -3,6 +3,7 @@
 Cada campo responde una pregunta concreta:
 - timestamp: ¿cuándo se hizo el request?
 - provider, model: ¿qué modelo generó este costo y esta latencia?
+- prompt_version: ¿con qué versión de prompt? (permite comparar costo entre versiones)
 - status, attempts: ¿funcionó? ¿cuántas llamadas al LLM hicieron falta?
 - category: ¿qué tipo de ticket fue? (permite ver costo y latencia por categoría)
 - prompt_tokens, completion_tokens, total_tokens: ¿cuánto consumió?
@@ -24,6 +25,7 @@ def build_record(
     *,
     provider: str,
     model: str,
+    prompt_version: str,
     status: str,
     attempts: int,
     category: str | None,
@@ -36,6 +38,7 @@ def build_record(
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "provider": provider,
         "model": model,
+        "prompt_version": prompt_version,
         "status": status,
         "attempts": attempts,
         "category": category,
