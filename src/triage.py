@@ -1,11 +1,15 @@
-"""Orquestación del triage: consulta -> prompt -> LLM -> JSON validado."""
+"""Orquestación del triage: consulta -> prompt -> LLM -> JSON validado -> métricas."""
 
 import json
 import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
 
 from pydantic import ValidationError
 
-from src.providers.base import LLMProvider
+from src.metrics import METRICS_PATH, build_record, log_request
+from src.providers.base import LLMError, LLMProvider
 from src.schemas import TriageResponse
 
 MAX_TOKENS = 1024
@@ -23,6 +27,19 @@ Categorías:
 
 Responde SOLO con un objeto JSON que cumpla este JSON Schema, sin texto adicional:
 {json.dumps(TriageResponse.model_json_schema(), ensure_ascii=False)}"""
+
+
+@dataclass
+class TriageResult:
+    """La respuesta para el cliente más los datos del request, para métricas y evals."""
+
+    response: TriageResponse
+    status: str  # "ok" | "invalid_response" | "api_error"
+    attempts: int
+    input_tokens: int
+    output_tokens: int
+    latency_s: float
+    error: str | None = None
 
 
 def extract_json(text: str) -> str:
@@ -72,22 +89,58 @@ def fallback_response(reason: str) -> TriageResponse:
     )
 
 
-def triage(query: str, provider: LLMProvider) -> TriageResponse:
-    """Clasifica una consulta y devuelve la respuesta validada contra el contrato.
+def triage(query: str, provider: LLMProvider, metrics_path: Path | None = METRICS_PATH) -> TriageResult:
+    """Clasifica una consulta y registra una línea de métricas.
 
     Si el modelo no respeta el contrato, reintenta mostrándole los errores.
-    Después de MAX_ATTEMPTS intentos fallidos, propaga el último ValidationError.
+    Nunca lanza errores del modelo ni de la API: en esos casos devuelve la respuesta
+    de respaldo con status distinto de "ok". Con metrics_path=None no registra nada.
     """
+    start = time.perf_counter()
+    input_tokens = output_tokens = attempts = 0
     user_message = query
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        llm_response = provider.complete(system=SYSTEM_PROMPT, user=user_message, max_tokens=MAX_TOKENS)
-        try:
-            return TriageResponse.model_validate_json(extract_json(llm_response.text))
-        except ValidationError as error:
-            if attempt == MAX_ATTEMPTS:
-                raise
-            print(f"Intento {attempt}/{MAX_ATTEMPTS} inválido, reintentando:\n{format_errors(error)}", file=sys.stderr)
-            user_message = build_retry_message(query, llm_response.text, error)
+    result = None
+
+    try:
+        while result is None:
+            attempts += 1
+            llm_response = provider.complete(system=SYSTEM_PROMPT, user=user_message, max_tokens=MAX_TOKENS)
+            input_tokens += llm_response.input_tokens
+            output_tokens += llm_response.output_tokens
+            try:
+                response = TriageResponse.model_validate_json(extract_json(llm_response.text))
+                result = TriageResult(response, "ok", attempts, input_tokens, output_tokens, 0.0)
+            except ValidationError as error:
+                if attempts == MAX_ATTEMPTS:
+                    result = TriageResult(
+                        fallback_response("respuesta inválida del modelo"),
+                        "invalid_response", attempts, input_tokens, output_tokens, 0.0,
+                        error=f"la respuesta del modelo no cumple el contrato:\n{format_errors(error)}",
+                    )
+                else:
+                    print(f"Intento {attempts}/{MAX_ATTEMPTS} inválido, reintentando:\n{format_errors(error)}", file=sys.stderr)
+                    user_message = build_retry_message(query, llm_response.text, error)
+    except LLMError as error:
+        result = TriageResult(
+            fallback_response("error de la API del proveedor"),
+            "api_error", attempts, input_tokens, output_tokens, 0.0, error=str(error),
+        )
+
+    result.latency_s = time.perf_counter() - start
+    if metrics_path is not None:
+        record = build_record(
+            provider=provider.name,
+            model=provider.model,
+            status=result.status,
+            attempts=result.attempts,
+            # La categoría del respaldo ("other") no la eligió el modelo: no la registramos.
+            category=result.response.category if result.status == "ok" else None,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            latency_s=result.latency_s,
+        )
+        log_request(record, metrics_path)
+    return result
 
 
 if __name__ == "__main__":
@@ -97,6 +150,7 @@ if __name__ == "__main__":
         """Proveedor simulado: devuelve respuestas inválidas antes de una válida."""
 
         name = "flaky"
+        model = "flaky-1"
 
         def __init__(self, answers: list[str]):
             self.answers = answers
@@ -105,20 +159,18 @@ if __name__ == "__main__":
         def complete(self, system: str, user: str, max_tokens: int) -> LLMResponse:
             text = self.answers[self.calls]
             self.calls += 1
-            return LLMResponse(text=text, model="flaky-1", input_tokens=0, output_tokens=0)
+            return LLMResponse(text=text, model=self.model, input_tokens=100, output_tokens=20)
 
     valid = '{"answer": "Revisamos tu cobro.", "confidence": 0.9, "category": "billing", "actions": ["Verificar cargos"]}'
     not_json = "Claro, aquí tienes la clasificación: billing"
     bad_contract = '{"answer": "Revisamos tu cobro.", "confidence": 1.5, "category": "ventas", "actions": []}'
 
     print("== Caso 1: falla 2 veces y se recupera al tercer intento ==")
-    provider = FlakyProvider([not_json, bad_contract, valid])
-    print(triage("me cobraron dos veces", provider))
-    print(f"Llamadas al LLM: {provider.calls}")
+    result = triage("me cobraron dos veces", FlakyProvider([not_json, bad_contract, valid]), metrics_path=None)
+    print(f"status={result.status} attempts={result.attempts} tokens={result.input_tokens}+{result.output_tokens}")
+    print(result.response)
 
     print("\n== Caso 2: falla los 3 intentos ==")
-    provider = FlakyProvider([not_json, bad_contract, not_json])
-    try:
-        triage("me cobraron dos veces", provider)
-    except ValidationError:
-        print(f"ValidationError final después de {provider.calls} llamadas")
+    result = triage("me cobraron dos veces", FlakyProvider([not_json, bad_contract, not_json]), metrics_path=None)
+    print(f"status={result.status} attempts={result.attempts} tokens={result.input_tokens}+{result.output_tokens}")
+    print(result.response)

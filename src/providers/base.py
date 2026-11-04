@@ -45,6 +45,7 @@ class LLMProvider(ABC):
     """
 
     name: str
+    model: str
 
     @abstractmethod
     def complete(self, system: str, user: str, max_tokens: int) -> LLMResponse:
@@ -57,6 +58,7 @@ if __name__ == "__main__":
         """Proveedor de prueba: devuelve el mismo mensaje, sin llamar a ninguna API."""
 
         name = "echo"
+        model = "echo-1"
 
         def complete(self, system: str, user: str, max_tokens: int) -> LLMResponse:
             return LLMResponse(text=user, model="echo-1", input_tokens=0, output_tokens=0)
