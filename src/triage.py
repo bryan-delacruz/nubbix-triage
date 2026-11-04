@@ -58,6 +58,20 @@ Errores:
 Corrige los errores y responde SOLO con el objeto JSON válido."""
 
 
+def fallback_response(reason: str) -> TriageResponse:
+    """Respuesta de respaldo cuando el servicio no pudo procesar la consulta.
+
+    Respeta el mismo contrato, así quien consume el JSON nunca recibe otro formato.
+    confidence=0 indica que no la generó el modelo y que la debe revisar un humano.
+    """
+    return TriageResponse(
+        answer="Recibimos tu consulta. Un agente de soporte la revisará a la brevedad.",
+        confidence=0.0,
+        category="other",
+        actions=[f"Revisar manualmente: el triage automático falló ({reason})"],
+    )
+
+
 def triage(query: str, provider: LLMProvider) -> TriageResponse:
     """Clasifica una consulta y devuelve la respuesta validada contra el contrato.
 

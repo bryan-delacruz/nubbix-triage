@@ -2,11 +2,13 @@
 
 import anthropic
 
-from src.providers.base import LLMProvider, LLMResponse
+from src.providers.base import LLMError, LLMProvider, LLMResponse, describe_status
 
 # URL fija de la API oficial. Se pasa explícita para que una variable ANTHROPIC_BASE_URL
 # definida en la terminal (por ejemplo, por otras herramientas) no desvíe las llamadas.
 ANTHROPIC_API_URL = "https://api.anthropic.com"
+TIMEOUT_S = 30.0  # Anthropic mide el timeout en segundos
+MAX_RETRIES = 2  # reintentos además de la llamada inicial; el SDK reintenta 408, 409, 429, 5xx y red
 
 
 class AnthropicProvider(LLMProvider):
@@ -16,15 +18,29 @@ class AnthropicProvider(LLMProvider):
         if not api_key:
             raise ValueError("Falta ANTHROPIC_API_KEY en el archivo .env")
         self.model = model
-        self.client = anthropic.Anthropic(api_key=api_key, base_url=ANTHROPIC_API_URL)
+        self.client = anthropic.Anthropic(
+            api_key=api_key,
+            base_url=ANTHROPIC_API_URL,
+            timeout=TIMEOUT_S,
+            max_retries=MAX_RETRIES,
+        )
 
     def complete(self, system: str, user: str, max_tokens: int) -> LLMResponse:
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+        except anthropic.APIStatusError as error:
+            raise LLMError(self.name, f"{describe_status(error.status_code)} (HTTP {error.status_code})") from error
+        except anthropic.APIConnectionError as error:
+            raise LLMError(self.name, f"No se pudo conectar con la API: {type(error).__name__}") from error
+
+        if response.stop_reason == "refusal":
+            raise LLMError(self.name, "El modelo se negó a responder la consulta")
+
         # La respuesta es una lista de bloques (texto, razonamiento, ...): nos quedamos con el texto.
         text = "".join(block.text for block in response.content if block.type == "text")
         return LLMResponse(

@@ -6,8 +6,9 @@ import sys
 from pydantic import ValidationError
 
 from src.config import SUPPORTED_PROVIDERS, load_settings
+from src.providers.base import LLMError
 from src.providers.factory import build_provider
-from src.triage import triage
+from src.triage import fallback_response, triage
 
 
 def parse_args(default_provider: str) -> argparse.Namespace:
@@ -24,16 +25,27 @@ def parse_args(default_provider: str) -> argparse.Namespace:
     return parser.parse_args()
 
 
+def fail(reason: str, detail: str) -> None:
+    """Explica el error en stderr, imprime el JSON de respaldo en stdout y termina con código 1."""
+    print(f"Error: {detail}", file=sys.stderr)
+    print(fallback_response(reason).model_dump_json(indent=2))
+    sys.exit(1)
+
+
 def main() -> None:
     settings = load_settings()
     args = parse_args(settings.default_provider)
-    provider = build_provider(args.provider, settings)
 
     try:
+        provider = build_provider(args.provider, settings)
         result = triage(args.query, provider)
     except ValidationError as error:
-        print(f"La respuesta del modelo no cumple el contrato:\n{error}", file=sys.stderr)
-        sys.exit(1)
+        fail("respuesta inválida del modelo", f"la respuesta del modelo no cumple el contrato:\n{error}")
+    except ValueError as error:
+        # Va después de ValidationError: Pydantic define ValidationError como un tipo de ValueError.
+        fail("configuración incompleta", str(error))
+    except LLMError as error:
+        fail("error de la API del proveedor", str(error))
 
     print(result.model_dump_json(indent=2))
 

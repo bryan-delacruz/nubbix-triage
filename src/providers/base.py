@@ -4,6 +4,30 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 
+class LLMError(Exception):
+    """Error al llamar a un proveedor, ya traducido a un mensaje claro.
+
+    Cada proveedor convierte los errores de su SDK en LLMError, así el resto
+    del código maneja un solo tipo de error sin conocer ningún SDK.
+    """
+
+    def __init__(self, provider: str, message: str):
+        super().__init__(f"[{provider}] {message}")
+
+
+def describe_status(status_code: int) -> str:
+    """Explica en palabras simples un código de error HTTP de la API."""
+    if status_code in (401, 403):
+        return "API key inválida o sin permisos. Revisa tu .env"
+    if status_code == 404:
+        return "Modelo no encontrado. Revisa el nombre del modelo en tu .env"
+    if status_code == 429:
+        return "Límite de uso alcanzado (rate limit). Espera un momento y vuelve a intentar"
+    if status_code >= 500:
+        return "El servicio del proveedor está con problemas. Vuelve a intentar más tarde"
+    return "La API rechazó la petición"
+
+
 @dataclass(frozen=True)
 class LLMResponse:
     """Lo que devuelve cualquier proveedor, en el mismo formato."""
