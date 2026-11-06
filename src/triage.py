@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from src.guardrails import check_input
 from src.metrics import METRICS_PATH, build_record, log_request
 from src.prompts import Prompt
 from src.providers.base import LLMError, LLMProvider
@@ -20,7 +21,7 @@ class TriageResult:
     """La respuesta para el cliente más los datos del request, para métricas y evals."""
 
     response: TriageResponse
-    status: str  # "ok" | "invalid_response" | "api_error"
+    status: str  # "ok" | "invalid_response" | "api_error" | "blocked_input"
     attempts: int
     input_tokens: int
     output_tokens: int
@@ -75,19 +76,12 @@ def fallback_response(reason: str) -> TriageResponse:
     )
 
 
-def triage(
-    query: str,
-    provider: LLMProvider,
-    prompt: Prompt,
-    metrics_path: Path | None = METRICS_PATH,
-) -> TriageResult:
-    """Clasifica una consulta y registra una línea de métricas.
+def call_llm(query: str, provider: LLMProvider, prompt: Prompt) -> TriageResult:
+    """Llama al LLM y valida el contrato, reintentando con los errores si no lo cumple.
 
-    Si el modelo no respeta el contrato, reintenta mostrándole los errores.
     Nunca lanza errores del modelo ni de la API: en esos casos devuelve la respuesta
-    de respaldo con status distinto de "ok". Con metrics_path=None no registra nada.
+    de respaldo con status distinto de "ok".
     """
-    start = time.perf_counter()
     input_tokens = output_tokens = attempts = 0
     user_message = query
     result = None
@@ -115,6 +109,30 @@ def triage(
         result = TriageResult(
             fallback_response("error de la API del proveedor"),
             "api_error", attempts, input_tokens, output_tokens, 0.0, error=str(error),
+        )
+    return result
+
+
+def triage(
+    query: str,
+    provider: LLMProvider,
+    prompt: Prompt,
+    metrics_path: Path | None = METRICS_PATH,
+) -> TriageResult:
+    """Clasifica una consulta y registra una línea de métricas.
+
+    Primero pasa por el guardrail de entrada: si detecta un ataque, la consulta no llega
+    al LLM y se devuelve la respuesta de respaldo. Con metrics_path=None no registra nada.
+    """
+    start = time.perf_counter()
+    check = check_input(query)
+    if check.allowed:
+        result = call_llm(query, provider, prompt)
+    else:
+        result = TriageResult(
+            fallback_response(f"consulta bloqueada por seguridad: {check.reason}"),
+            "blocked_input", 0, 0, 0, 0.0,
+            error=f"guardrail de entrada: {check.reason} ('{check.matched}')",
         )
 
     result.latency_s = time.perf_counter() - start
