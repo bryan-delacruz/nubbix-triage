@@ -12,3 +12,6 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+# Corridas parciales de evals (--limit): solo pruebas rápidas
+evals/results/*_limit*.json
