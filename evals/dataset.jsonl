@@ -1,0 +1,40 @@
+{"id": "billing-01", "query": "Buenas tardes, este mes me debitaron la suscripción dos veces de la tarjeta. Necesito que me devuelvan uno de los cobros.", "expected_category": "billing", "tags": ["clear"]}
+{"id": "billing-02", "query": "Necesito la factura de septiembre a nombre de mi empresa, la que me llegó salió a mi nombre personal.", "expected_category": "billing", "tags": ["clear"]}
+{"id": "billing-03", "query": "¿Por qué me cobraron más este mes? Siempre pago lo mismo y ahora vino un monto mayor sin aviso.", "expected_category": "billing", "tags": ["clear"]}
+{"id": "billing-04", "query": "Quiero dar de baja el plan premium y volver al básico a partir del próximo ciclo de facturación.", "expected_category": "billing", "tags": ["clear"]}
+{"id": "billing-05", "query": "Me rechazaron el pago de la renovación pero la tarjeta tiene fondos. ¿Me van a suspender el servicio?", "expected_category": "billing", "tags": ["clear"]}
+{"id": "billing-06", "query": "La factura tiene mal el CUIT de la empresa, la necesito corregida para presentarla.", "expected_category": "billing", "tags": ["clear"]}
+{"id": "billing-07", "query": "ola me llego un cobro q no reconosco de nubix, q es eso??", "expected_category": "billing", "tags": ["informal", "typos"]}
+{"id": "billing-08", "query": "che, ¿cuándo me devuelven la plata del reintegro que pedí hace dos semanas? Ya pasó un montón.", "expected_category": "billing", "tags": ["informal"]}
+{"id": "billing-09", "query": "Cancelé la suscripción el mes pasado y me la siguieron cobrando igual.", "expected_category": "billing", "tags": ["ambiguous"], "note": "Podría parecer account (baja de cuenta), pero lo que reclama es un cobro indebido."}
+{"id": "billing-10", "query": "Cambié la tarjeta de crédito en mi perfil y ahora el cobro del mes salió rechazado.", "expected_category": "billing", "tags": ["multi-topic"], "note": "Menciona el perfil (account), pero el problema a resolver es el cobro rechazado."}
+{"id": "technical-01", "query": "La app no carga desde esta mañana, se queda en la pantalla de inicio con el ícono girando.", "expected_category": "technical", "tags": ["clear"]}
+{"id": "technical-02", "query": "Cuando exporto el reporte de ventas a Excel, el archivo sale vacío.", "expected_category": "technical", "tags": ["clear"]}
+{"id": "technical-03", "query": "La sincronización con la tienda de Tiendanube dejó de actualizar el stock desde el viernes.", "expected_category": "technical", "tags": ["clear"]}
+{"id": "technical-04", "query": "Me aparece 'Error 403' cada vez que intento generar una factura electrónica.", "expected_category": "technical", "tags": ["clear"], "note": "Habla de facturas, pero es un error del sistema, no un problema de cobro."}
+{"id": "technical-05", "query": "El sistema está lentísimo, cada pantalla tarda más de un minuto en abrir.", "expected_category": "technical", "tags": ["clear"]}
+{"id": "technical-06", "query": "Los tickets de venta no se imprimen en la impresora fiscal desde que actualizaron la versión.", "expected_category": "technical", "tags": ["clear"]}
+{"id": "technical-07", "query": "no me anda nada!!! la pagina tira error todo el tiempo", "expected_category": "technical", "tags": ["informal"]}
+{"id": "technical-08", "query": "el lector de codigo de barras no lee nada en la pantalla de ventas, antes andaba bien", "expected_category": "technical", "tags": ["informal", "typos"]}
+{"id": "technical-09", "query": "Los cobros con Mercado Pago aparecen aprobados en Mercado Pago pero en Nubbix figuran como pendientes.", "expected_category": "technical", "tags": ["ambiguous"], "note": "Habla de cobros, pero es una falla de sincronización de la integración, no de la suscripción."}
+{"id": "technical-10", "query": "Al intentar iniciar sesión me sale 'error interno del servidor', no es mi contraseña porque ni siquiera me deja escribirla.", "expected_category": "technical", "tags": ["ambiguous"], "note": "Parece de acceso (account), pero el cliente aclara que es una falla del sistema."}
+{"id": "account-01", "query": "Olvidé mi contraseña y el email de recuperación no me llega.", "expected_category": "account", "tags": ["clear"]}
+{"id": "account-02", "query": "¿Cómo le doy permisos de administrador a mi socio para que pueda ver los reportes?", "expected_category": "account", "tags": ["clear"]}
+{"id": "account-03", "query": "Quiero eliminar a un empleado que ya no trabaja con nosotros para que no pueda entrar más.", "expected_category": "account", "tags": ["clear"]}
+{"id": "account-04", "query": "Necesito cambiar la razón social de la empresa en la cuenta porque nos convertimos en sociedad.", "expected_category": "account", "tags": ["clear"]}
+{"id": "account-05", "query": "Me bloquearon la cuenta por demasiados intentos fallidos, ¿cómo la desbloqueo?", "expected_category": "account", "tags": ["clear"]}
+{"id": "account-06", "query": "¿Se puede activar la verificación en dos pasos para todos los usuarios de la cuenta?", "expected_category": "account", "tags": ["clear"]}
+{"id": "account-07", "query": "kiero q mi encargado solo pueda cargar ventas y no vea los numeros de la caja", "expected_category": "account", "tags": ["informal", "typos"]}
+{"id": "account-08", "query": "tengo 2 cuentas distintas sin querer, se pueden unir en una sola??", "expected_category": "account", "tags": ["informal"]}
+{"id": "account-09", "query": "No puedo entrar a mi cuenta y necesito descargar las facturas para mi contador hoy.", "expected_category": "account", "tags": ["multi-topic"], "note": "Menciona facturas, pero primero tiene que recuperar el acceso."}
+{"id": "account-10", "query": "Quiero dar de baja mi cuenta y que borren todos los datos de mi empresa.", "expected_category": "account", "tags": ["ambiguous"], "note": "Podría ser billing (cancelar suscripción), pero pide eliminar la cuenta y sus datos."}
+{"id": "other-01", "query": "¿Tienen una versión de Nubbix para restaurantes con manejo de mesas?", "expected_category": "other", "tags": ["clear"]}
+{"id": "other-02", "query": "Me gustaría sugerir que agreguen un modo oscuro a la aplicación.", "expected_category": "other", "tags": ["clear"]}
+{"id": "other-03", "query": "¿Cuánto cuesta el plan para 3 sucursales? Estamos evaluando contratarlo.", "expected_category": "other", "tags": ["clear"], "note": "Consulta comercial previa a contratar: no es facturación de un plan existente."}
+{"id": "other-04", "query": "¿Dan capacitaciones presenciales para el equipo? Somos 15 personas.", "expected_category": "other", "tags": ["clear"]}
+{"id": "other-05", "query": "¿Nubbix funciona en Uruguay o solo en Argentina?", "expected_category": "other", "tags": ["clear"]}
+{"id": "other-06", "query": "Quiero felicitar a la chica de soporte que me atendió ayer, fue muy amable.", "expected_category": "other", "tags": ["clear"]}
+{"id": "other-07", "query": "hola", "expected_category": "other", "tags": ["vague"]}
+{"id": "other-08", "query": "necesito ayuda urgente", "expected_category": "other", "tags": ["vague"]}
+{"id": "other-09", "query": "¿Tienen API para conectar Nubbix con nuestro sistema propio? Queremos evaluar si es posible.", "expected_category": "other", "tags": ["ambiguous"], "note": "Suena técnico, pero es una consulta comercial sobre funcionalidades, no una falla."}
+{"id": "other-10", "query": "Hi, do you offer an English version of the platform for our team in the US?", "expected_category": "other", "tags": ["clear", "english"]}
