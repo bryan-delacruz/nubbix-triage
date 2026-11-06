@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from src.schemas import TriageResponse
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
-DEFAULT_PROMPT_VERSION = "v1"
+DEFAULT_PROMPT_VERSION = "v2"  # elegida por evals: ver README, sección 5
 SCHEMA_PLACEHOLDER = "{schema}"
 
 

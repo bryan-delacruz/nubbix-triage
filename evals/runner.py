@@ -11,6 +11,7 @@ Es un script simple a propósito: sin pytest ni frameworks de testing.
 import argparse
 import json
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,6 +52,7 @@ def run_case(case: dict, provider, prompt) -> dict:
         "output_tokens": result.output_tokens,
         "latency_s": round(result.latency_s, 3),
         "cost_usd": estimate_cost(provider.model, result.input_tokens, result.output_tokens) or 0.0,
+        "error": result.error,
     }
 
 
@@ -123,6 +125,10 @@ def parse_args(default_provider: str) -> argparse.Namespace:
     parser.add_argument("--prompt", choices=available_versions(), default=DEFAULT_PROMPT_VERSION)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET, help="Archivo JSONL de casos")
     parser.add_argument("--limit", type=int, help="Correr solo los primeros N casos (para pruebas rápidas)")
+    parser.add_argument(
+        "--delay", type=float, default=0.0,
+        help="Segundos de espera entre casos, para no superar el rate limit de la capa gratuita",
+    )
     return parser.parse_args()
 
 
@@ -135,9 +141,12 @@ def main() -> None:
 
     rows = []
     for number, case in enumerate(cases, start=1):
+        if number > 1 and args.delay:
+            time.sleep(args.delay)
         row = run_case(case, provider, prompt)
         mark = "✓" if row["correct"] else "✗"
-        print(f"[{number}/{len(cases)}] {mark} {row['id']}: {row['predicted'] or row['status']}", file=sys.stderr)
+        detail = f" ({row['error']})" if row["error"] else ""
+        print(f"[{number}/{len(cases)}] {mark} {row['id']}: {row['predicted'] or row['status']}{detail}", file=sys.stderr)
         rows.append(row)
 
     summary = summarize(rows)
