@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from src.guardrails import add_canary, check_input, check_output, new_canary
 from src.metrics import METRICS_PATH, build_record, log_request
 from src.prompts import Prompt
-from src.providers.base import LLMError, LLMProvider
+from src.providers.base import LLMError, LLMProvider, LLMRefusal
 from src.schemas import TriageResponse
 
 MAX_ATTEMPTS = 3  # 1 intento + 2 reintentos
@@ -21,7 +21,7 @@ class TriageResult:
     """La respuesta para el cliente más los datos del request, para métricas y evals."""
 
     response: TriageResponse
-    status: str  # "ok" | "invalid_response" | "api_error" | "blocked_input" | "blocked_output"
+    status: str  # "ok" | "invalid_response" | "api_error" | "refused" | "blocked_input" | "blocked_output"
     attempts: int
     input_tokens: int
     output_tokens: int
@@ -76,7 +76,7 @@ def fallback_response(reason: str) -> TriageResponse:
     )
 
 
-def call_llm(query: str, provider: LLMProvider, prompt: Prompt) -> TriageResult:
+def call_llm(query: str, provider: LLMProvider, prompt: Prompt, output_guardrail: bool = True) -> TriageResult:
     """Llama al LLM y valida el contrato, reintentando con los errores si no lo cumple.
 
     Nunca lanza errores del modelo ni de la API: en esos casos devuelve la respuesta
@@ -96,8 +96,8 @@ def call_llm(query: str, provider: LLMProvider, prompt: Prompt) -> TriageResult:
             output_tokens += llm_response.output_tokens
             try:
                 response = TriageResponse.model_validate_json(extract_json(llm_response.text))
-                check = check_output([response.answer, *response.actions], canary)
-                if check.allowed:
+                check = check_output([response.answer, *response.actions], canary) if output_guardrail else None
+                if check is None or check.allowed:
                     result = TriageResult(response, "ok", attempts, input_tokens, output_tokens, 0.0)
                 else:
                     # No se reintenta: si el modelo filtró datos una vez, no se le da otra oportunidad.
@@ -116,6 +116,12 @@ def call_llm(query: str, provider: LLMProvider, prompt: Prompt) -> TriageResult:
                 else:
                     print(f"Intento {attempts}/{MAX_ATTEMPTS} inválido, reintentando:\n{format_errors(error)}", file=sys.stderr)
                     user_message = build_retry_message(query, llm_response.text, error)
+    except LLMRefusal as error:
+        # Va antes que LLMError: LLMRefusal es un tipo de LLMError.
+        result = TriageResult(
+            fallback_response("el modelo se negó a responder"),
+            "refused", attempts, input_tokens, output_tokens, 0.0, error=str(error),
+        )
     except LLMError as error:
         result = TriageResult(
             fallback_response("error de la API del proveedor"),
@@ -129,16 +135,18 @@ def triage(
     provider: LLMProvider,
     prompt: Prompt,
     metrics_path: Path | None = METRICS_PATH,
+    guardrails: bool = True,
 ) -> TriageResult:
     """Clasifica una consulta y registra una línea de métricas.
 
     Primero pasa por el guardrail de entrada: si detecta un ataque, la consulta no llega
     al LLM y se devuelve la respuesta de respaldo. Con metrics_path=None no registra nada.
+    guardrails=False apaga los 2 guardrails: solo para medir su efecto en la suite adversarial.
     """
     start = time.perf_counter()
-    check = check_input(query)
-    if check.allowed:
-        result = call_llm(query, provider, prompt)
+    check = check_input(query) if guardrails else None
+    if check is None or check.allowed:
+        result = call_llm(query, provider, prompt, output_guardrail=guardrails)
     else:
         result = TriageResult(
             fallback_response(f"consulta bloqueada por seguridad: {check.reason}"),

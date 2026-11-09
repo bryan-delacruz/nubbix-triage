@@ -15,6 +15,10 @@ class LLMError(Exception):
         super().__init__(f"[{provider}] {message}")
 
 
+class LLMRefusal(LLMError):
+    """El modelo se negó a responder por seguridad. No es una falla de la API."""
+
+
 def describe_status(status_code: int) -> str:
     """Explica en palabras simples un código de error HTTP de la API."""
     if status_code in (401, 403):

@@ -2,7 +2,7 @@
 
 import anthropic
 
-from src.providers.base import LLMError, LLMProvider, LLMResponse, describe_status
+from src.providers.base import LLMError, LLMProvider, LLMRefusal, LLMResponse, describe_status
 
 # URL fija de la API oficial. Se pasa explícita para que una variable ANTHROPIC_BASE_URL
 # definida en la terminal (por ejemplo, por otras herramientas) no desvíe las llamadas.
@@ -39,7 +39,7 @@ class AnthropicProvider(LLMProvider):
             raise LLMError(self.name, f"No se pudo conectar con la API: {type(error).__name__}") from error
 
         if response.stop_reason == "refusal":
-            raise LLMError(self.name, "El modelo se negó a responder la consulta")
+            raise LLMRefusal(self.name, "El modelo se negó a responder la consulta")
 
         # La respuesta es una lista de bloques (texto, razonamiento, ...): nos quedamos con el texto.
         text = "".join(block.text for block in response.content if block.type == "text")
