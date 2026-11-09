@@ -30,9 +30,10 @@ def available_versions() -> list[str]:
 
 def load_prompt(version: str) -> Prompt:
     """Lee prompts/<version>.yaml, lo valida y completa el JSON Schema del contrato."""
-    path = PROMPTS_DIR / f"{version}.yaml"
-    if not path.exists():
+    # Solo nombres de archivos que existen en prompts/: evita rutas como "../../otro" (path traversal).
+    if version not in available_versions():
         raise ValueError(f"No existe el prompt '{version}'. Disponibles: {', '.join(available_versions())}")
+    path = PROMPTS_DIR / f"{version}.yaml"
 
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     prompt = Prompt.model_validate(data)

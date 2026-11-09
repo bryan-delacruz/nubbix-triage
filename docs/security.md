@@ -10,7 +10,7 @@ Consulta ──> [1] Guardrail de entrada ──> [2] LLM con canario ──> [3
 
 | Capa | Qué hace | Archivo |
 |---|---|---|
-| 1. Entrada | Rechaza consultas vacías o de más de 2.000 caracteres. Normaliza el texto (minúsculas, sin acentos, sin caracteres invisibles, leetspeak a letras, versión sin espacios) y busca patrones de injection, jailbreak y exfiltración en español e inglés | `src/guardrails.py` → `check_input` |
+| 1. Entrada | Rechaza consultas vacías o de más de 2.000 caracteres. Normaliza el texto (minúsculas, sin acentos, sin caracteres invisibles como el guion suave, letras cirílicas o griegas que imitan a las latinas, leetspeak a letras, versión sin espacios) y busca patrones de injection, jailbreak y exfiltración en español e inglés | `src/guardrails.py` → `check_input` |
 | 2. Canario | Agrega al system prompt un código aleatorio distinto en cada request (`NBX-…`). Si aparece en la respuesta, el modelo filtró sus instrucciones | `new_canary`, `add_canary` |
 | 3. Contrato | Pydantic valida la estructura y los valores del JSON | `src/schemas.py` |
 | 4. Salida | Bloquea la respuesta si contiene el canario, fragmentos del system prompt o del JSON Schema, API keys o contraseñas, o links a dominios que no son de Nubbix | `check_output` |

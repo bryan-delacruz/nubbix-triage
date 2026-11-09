@@ -114,7 +114,9 @@ O desde el navegador: http://localhost:8000/docs → `POST /triage` → **Try it
 | `POST /triage` | Body: `query` (obligatorio), `provider` y `prompt` (opcionales, mismos valores que en la CLI). Responde el JSON del contrato |
 | `GET /health` | Devuelve `{"status": "ok"}` si el servidor está activo |
 
-El header `X-Triage-Status` vale `ok` o el motivo del respaldo: `blocked_input`, `blocked_output`, `api_error`, `refused`, `invalid_response` o `config_error`.
+El header `X-Triage-Status` vale `ok` o el motivo del respaldo: `invalid_input`, `blocked_input`, `blocked_output`, `api_error`, `refused`, `invalid_response` o `config_error`.
+
+**Protección:** con `API_TOKEN` en el `.env`, cada request debe mandar el header `X-API-Key` con ese valor (si no, `401`). Cada IP tiene un límite de `RATE_LIMIT_PER_MINUTE` requests por minuto (por defecto 30; si lo supera, `429`).
 
 ### Métricas
 

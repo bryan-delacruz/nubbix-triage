@@ -16,6 +16,7 @@ from src.schemas import TriageResponse
 
 MAX_ATTEMPTS = 3  # 1 intento + 2 reintentos
 MAX_TOKENS_CAP = 4096  # tope al ampliar max_tokens cuando una respuesta se corta
+INVALID_INPUT_REASONS = ("empty", "too_long")
 
 
 @dataclass
@@ -23,7 +24,7 @@ class TriageResult:
     """La respuesta para el cliente más los datos del request, para métricas y evals."""
 
     response: TriageResponse
-    status: str  # "ok" | "invalid_response" | "api_error" | "refused" | "blocked_input" | "blocked_output"
+    status: str  # "ok" | "invalid_input" | "invalid_response" | "api_error" | "refused" | "blocked_input" | "blocked_output"
     attempts: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
@@ -161,7 +162,14 @@ def triage(
         cache_dir = None  # una respuesta sin revisar nunca entra ni sale de la caché
     check = check_input(query) if guardrails else None
 
-    if check is not None and not check.allowed:
+    if check is not None and check.reason in INVALID_INPUT_REASONS:
+        # Consulta vacía o demasiado larga: es un error de entrada, no un ataque.
+        result = TriageResult(
+            response=fallback_response(f"consulta inválida: {check.reason}"),
+            status="invalid_input",
+            error=f"consulta inválida: {check.reason}",
+        )
+    elif check is not None and not check.allowed:
         result = TriageResult(
             response=fallback_response(f"consulta bloqueada por seguridad: {check.reason}"),
             status="blocked_input",
