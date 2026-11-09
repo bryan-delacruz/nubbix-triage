@@ -4,7 +4,9 @@ Servicio de línea de comandos que recibe una consulta de soporte en texto libre
 
 Proyecto Integrador del Módulo 1 — AI Engineering (Henry).
 
-> **Estado:** en construcción, commit a commit. Este README describe el plan y la arquitectura objetivo. Las secciones de uso, resultados y decisiones se completan a medida que avanza cada etapa.
+**Resultados en una línea:** 97,5 % de accuracy con el prompt v2 en los 2 modelos, 100 % de JSON válido, ~$0,0004 por ticket a precio pago y 10/10 ataques mitigados con guardrails. Detalle en las secciones [5](#5-resultados-de-evals) y [6](#6-seguridad).
+
+**Para correrlo rápido:** ver la [sección 4](#4-instalación-y-uso).
 
 ---
 
@@ -67,12 +69,13 @@ Todo request devuelve exactamente este JSON, también cuando hay un error o un b
 
 ```json
 {
-  "answer": "Hola, lamentamos el doble cobro. Ya derivamos tu caso al equipo de facturación...",
-  "confidence": 0.92,
+  "answer": "Lamentamos el cobro duplicado de tu suscripción de este mes. Nuestro equipo de facturación va a revisar los pagos registrados en tu cuenta y te confirmaremos el resultado; ¿puedes indicarnos la fecha y el monto de ambos cargos?",
+  "confidence": 0.95,
   "category": "billing",
   "actions": [
-    "Verificar cargos duplicados del mes en el panel de pagos",
-    "Iniciar reintegro del cargo duplicado"
+    "Revisar en el historial de pagos del cliente si hay dos cargos de la suscripción del mes",
+    "Verificar la fecha, el monto y el estado de cada cargo",
+    "Iniciar el proceso de reintegro del cargo duplicado si se confirma la duplicidad"
   ]
 }
 ```
@@ -118,7 +121,9 @@ flowchart TB
     triage --> cache[src/cache.py]
     config[src/config.py<br/>.env] -.-> base
     runner[evals/runner.py] --> triage
-    runner --> ds[(evals/dataset.jsonl<br/>evals/adversarial.jsonl)]
+    runner --> ds[(evals/dataset.jsonl)]
+    adv[evals/adversarial.py] --> triage
+    adv --> ads[(evals/adversarial.jsonl)]
 ```
 
 | Módulo | Responsabilidad |
@@ -128,11 +133,12 @@ flowchart TB
 | `src/providers/` | Una clase por proveedor detrás de la interfaz `LLMProvider` |
 | `src/schemas.py` | Contrato `TriageResponse` en Pydantic |
 | `src/prompts.py` | Cargar y renderizar la versión de prompt elegida |
-| `src/guardrails.py` | Detección de injection, moderación y validación de la salida |
+| `src/guardrails.py` | Guardrail de entrada (injection, jailbreak, exfiltración), canario y guardrail de salida |
 | `src/metrics.py` | Escribir una línea por request en `data/metrics.jsonl` |
 | `src/pricing.py` | Precios por modelo, con fuente y fecha |
 | `src/cache.py` | Caché por hash MD5 de consulta + prompt + modelo |
 | `evals/runner.py` | Correr el dataset y reportar score global y por categoría |
+| `evals/adversarial.py` | Correr los 10 ataques con y sin guardrails |
 
 ### Decisiones técnicas
 
@@ -148,8 +154,13 @@ flowchart TB
 | Costo | Precio por MTok guardado en cada línea | Cualquiera puede recalcular el costo y llegar al mismo número |
 | Seguridad | Defensa en capas | Un solo guardrail se evade con variaciones triviales |
 | Evals | Script simple | La complejidad va en el prompt y los evals, no en las herramientas |
+| `max_tokens` | 1024, definido en cada YAML | En `data/metrics.jsonl`, una respuesta usa 185 tokens de salida (mediana) y como máximo 851: deja margen sin permitir respuestas desmedidas |
+| `temperature` | No se envía | La API de Anthropic la rechaza con error 400 desde el 2026-10-21. Para mantener los 2 proveedores en igualdad, tampoco se envía a Gemini: se usa el valor por defecto de cada uno |
+| Timeout y reintentos de red | 30 s y hasta 3 intentos | Configurados de forma explícita en cada SDK: el de Gemini no reintenta si no se le indica |
+| Proveedor por defecto | Gemini | Su capa gratuita hace que desarrollo y pruebas cuesten $0. Para producción se recomienda Haiku 5.5 (sección 5) |
+| Caché | MD5 de proveedor + modelo + prompt + consulta | Una consulta repetida cuesta $0; editar el prompt invalida la caché sola |
 
-### Estructura del repositorio (objetivo)
+### Estructura del repositorio
 
 ```text
 .
@@ -171,12 +182,14 @@ flowchart TB
 │   ├── v1.yaml          # zero-shot (línea base)
 │   └── v2.yaml          # few-shot + reglas
 ├── evals/
-│   ├── dataset.jsonl
-│   ├── adversarial.jsonl
-│   ├── runner.py
-│   └── results/
+│   ├── dataset.jsonl         # 40 tickets etiquetados
+│   ├── adversarial.jsonl     # 10 ataques
+│   ├── runner.py             # evals de clasificación
+│   ├── adversarial.py        # suite adversarial
+│   └── results/              # resultados de cada corrida (JSON)
 ├── data/
-│   └── metrics.jsonl
+│   ├── metrics.jsonl         # una línea por request (append-only)
+│   └── cache/                # caché local (fuera de git)
 ├── docs/
 │   └── ai-usage.md
 ├── .env.example
@@ -186,9 +199,9 @@ flowchart TB
 
 ---
 
-## 3. Plan de construcción
+## 3. Historial de construcción
 
-El proyecto se construye en 20 commits chicos. Cada commit agrega una sola pieza, se explica y se verifica antes de pasar al siguiente.
+El proyecto se construyó en 21 commits chicos. Cada commit agrega una sola pieza y se verificó antes de pasar al siguiente (`git log --oneline`).
 
 | Etapa | Commits | Resultado | Criterio de la rúbrica |
 |---|---|---|---|
@@ -198,7 +211,7 @@ El proyecto se construye en 20 commits chicos. Cada commit agrega una sola pieza
 | D. Observabilidad | 10–11 | **Hito 2:** métricas en `data/metrics.jsonl` | Observabilidad |
 | E. Prompts y evals | 12–16 | **Hito 3:** comparativa v1 vs v2 con datos | Evals y prompting |
 | F. Seguridad | 17–19 | Guardrails y suite adversarial | Seguridad |
-| G. Cierre | 20 + docs | Caché, comparativa de modelos, README final | Extra credits |
+| G. Cierre | 20–21 | Caché MD5 y README final | Extra credits |
 
 | # | Commit |
 |---|---|
@@ -221,7 +234,10 @@ El proyecto se construye en 20 commits chicos. Cada commit agrega una sola pieza
 | 17 | `feat: guardrail de entrada en capas` |
 | 18 | `feat: guardrail de salida y token canario` |
 | 19 | `feat: suite adversarial (bonus)` |
-| 20 | `feat: caché MD5 + comparativa de modelos` |
+| 20 | `feat: caché MD5 de respuestas` |
+| 21 | `docs: README final y uso de IA` |
+
+La comparativa de modelos (extra credit) quedó en el commit 16, junto con la de prompts.
 
 ---
 
@@ -301,7 +317,7 @@ python -m evals.runner --provider gemini --prompt v2 --delay 4
 
 ## 5. Resultados de evals
 
-**Dataset:** [`evals/dataset.jsonl`](evals/dataset.jsonl), con 40 tickets ficticios etiquetados a mano: 10 por categoría. Incluye casos claros (25), informales o con errores de tipeo (6), ambiguos o con dos temas (7), vagos (2) y uno en inglés. Varios casos son "trampas" con palabras de otra categoría (por ejemplo, un error 403 al generar una factura es `technical`, no `billing`).
+**Dataset:** [`evals/dataset.jsonl`](evals/dataset.jsonl), con 40 tickets ficticios etiquetados: 10 por categoría. Incluye casos claros (25), informales o con errores de tipeo (6), ambiguos o con dos temas (7), vagos (2) y uno en inglés. Varios casos son "trampas" con palabras de otra categoría (por ejemplo, un error 403 al generar una factura es `technical`, no `billing`).
 
 **Métrica principal:** accuracy de `category`. Un ticket cuenta como acierto si el modelo devolvió JSON válido y la categoría esperada.
 
@@ -329,6 +345,8 @@ Fuente: [`evals/results/dataset_anthropic_v1.json`](evals/results/dataset_anthro
 
 **Error de v2:** solo `technical-04`. Es un caso discutible: un 403 puede leerse como falta de permisos.
 
+**El reintento funciona en casos reales:** en una corrida de verificación con Anthropic (2026-11-09), 8 respuestas no cumplieron el contrato en el primer intento y las 8 se recuperaron en el segundo, gracias al reintento que le devuelve los errores al modelo (ver `attempts: 2` en `data/metrics.jsonl`).
+
 ### Decisión: v2 es el prompt por defecto
 
 - **Clasifica mejor:** +7,5 puntos en total, y resuelve todos los casos ambiguos, que son donde v1 fallaba.
@@ -340,7 +358,7 @@ Fuente: [`evals/results/dataset_anthropic_v1.json`](evals/results/dataset_anthro
 
 **Limitaciones de esta comparación:**
 - 40 casos son pocos: un caso equivale a 2,5 puntos. La diferencia entre v1 y v2 (3 casos) es consistente, pero no estadísticamente fuerte.
-- Las etiquetas las puso una sola persona; en los casos ambiguos otra persona podría decidir distinto (ver el campo `note` del dataset).
+- Las etiquetas las propuso el asistente de IA, sin una segunda revisión independiente; en los casos ambiguos otra persona podría decidir distinto (ver el campo `note` del dataset).
 - 2 casos (`account-09`, `technical-09`) se parecen a reglas de desempate de v2. Sin ellos, v2 sigue ganando: 97,4 % contra 92,1 %.
 
 ### Mismo prompt, 2 modelos
@@ -427,8 +445,16 @@ Ataque `adv-01`:
 
 ## 7. Limitaciones
 
-_Se completa al cierre._
+- **Datos ficticios:** el dataset y los ataques son inventados. Con tickets reales de Nubbix la accuracy puede ser distinta.
+- **Dataset chico:** 40 casos con etiquetas propuestas por el asistente de IA, sin revisión independiente; un caso equivale a 2,5 puntos de accuracy.
+- **Solo se mide la categoría:** la calidad de `answer` y `actions` se revisó a mano en ejemplos, no con una métrica automática (por ejemplo, un LLM como juez).
+- **La confianza no está calibrada:** con Haiku separa aciertos de errores; con Gemini no sirve (0,98 también en los errores).
+- **El modelo no conoce Nubbix:** no tiene acceso a la documentación, los planes ni las cuentas de los clientes. Por eso el prompt le prohíbe inventar menús, plazos o políticas. Esa información llegaría con RAG (Módulo 2).
+- **Guardrails por patrones:** atrapan ataques conocidos y sus variaciones; uno nuevo y bien reformulado puede pasar el filtro de entrada. No hay moderación de contenido con un servicio externo.
+- **Capa gratuita de Gemini:** tiene rate limits bajos (hay que espaciar las corridas con `--delay`) y Google puede usar esos datos para mejorar sus productos. No es apta para datos reales de clientes.
+- **Precios fijos en el código:** `src/pricing.py` se verificó el 2026-10-29. Si los proveedores cambian sus precios, hay que actualizarlo a mano.
+- **Una consulta por ejecución:** no hay API web ni modo interactivo; la integración con el sistema de tickets sería llamar a la CLI o envolver `triage()` en un servicio (por ejemplo, FastAPI).
 
 ## 8. Uso de IA en el desarrollo
 
-_Se registra en `docs/ai-usage.md` a lo largo del proyecto._
+El proyecto se construyó con Claude Code como asistente, commit a commit: cada paso se explicó, se probó con comandos reales y se aprobó antes de commitear. Los prompts usados, las decisiones que salieron de ellos y lo que se corrigió durante el proceso están en [`docs/ai-usage.md`](docs/ai-usage.md).
