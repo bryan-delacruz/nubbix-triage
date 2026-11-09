@@ -153,17 +153,17 @@ Suite adversarial (10 ataques de injection, jailbreak y exfiltración): con guar
 
 **Recomendación: `claude-haiku-5-5` con el prompt `v2` para producción, y `gemini-3.1-flash-lite` (capa gratuita) solo para desarrollo y pruebas.**
 
-Con `v2` los 2 modelos aciertan lo mismo (97,5 %), así que la elección se decide por costo, confianza, latencia, seguridad y privacidad:
+Con `v2` los 2 modelos aciertan lo mismo (97,5 %), así que la elección se decide por costo, confianza, latencia, seguridad y privacidad. Cada dato sale de una prueba del repo:
 
-| Criterio | Haiku 5.5 | Gemini 3.1 Flash-Lite | Gana |
-|---|---|---|---|
-| Accuracy con v2 | 97,5 % | 97,5 % | Empate |
-| Costo por ticket pagando | $0,00040 | $0,00046 | **Haiku** (13 % menos) |
-| Costo en desarrollo | ~$0,016 por corrida de evals | $0 (capa gratuita) | **Gemini** |
-| Confianza útil para priorizar | Sí: 0,86 en aciertos y 0,70 en errores | No: 0,95 también en errores | **Haiku** |
-| Latencia máxima | 4,6 s | 15,8 s (rate limit de la capa gratuita) | **Haiku** |
-| Ataques sin guardrails | Resistió 10/10 | Cayó en 3/10 | **Haiku** |
-| Datos de clientes reales | Sí | Solo en capa paga: en la gratuita Google usa los datos | **Haiku** |
+| Criterio | Haiku 5.5 | Gemini 3.1 Flash-Lite | Gana | Prueba de referencia |
+|---|---|---|---|---|
+| Accuracy con v2 | 97,5 % | 97,5 % | Empate | Evals, 40 tickets: [`dataset_anthropic_v2.json`](evals/results/dataset_anthropic_v2.json), [`dataset_gemini_v2.json`](evals/results/dataset_gemini_v2.json) |
+| Costo por ticket pagando | $0,00040 | $0,00046 | **Haiku** (13 % menos) | Costo total de esas corridas ÷ 40, con los precios de [`src/pricing.py`](src/pricing.py) |
+| Costo en desarrollo | ~$0,016 por corrida de evals | $0 (capa gratuita) | **Gemini** | Mismas corridas; Gemini se usó con la capa gratuita |
+| Confianza útil para priorizar | Sí: 0,86 en aciertos y 0,70 en errores | No: 0,95 también en errores | **Haiku** | `summary.avg_confidence_correct` / `_wrong` de esas corridas |
+| Latencia máxima | 4,6 s | 15,8 s (rate limit de la capa gratuita) | **Haiku** | `latency_s` por caso en esas corridas |
+| Ataques sin guardrails | Resistió 10/10 | Cayó en 3/10 | **Haiku** | Suite adversarial: [`adversarial_anthropic_v2.json`](evals/results/adversarial_anthropic_v2.json), [`adversarial_gemini_v2.json`](evals/results/adversarial_gemini_v2.json) |
+| Datos de clientes reales | Sí | Solo en capa paga: en la gratuita Google usa los datos | **Haiku** | Términos de la [página de precios de Gemini](https://ai.google.dev/gemini-api/docs/pricing) (no es una prueba) |
 
 ```mermaid
 flowchart TD
