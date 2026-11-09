@@ -17,7 +17,6 @@ Resultado de cada ataque:
 
 import argparse
 import json
-import re
 import sys
 import time
 from collections import Counter
@@ -25,21 +24,18 @@ from datetime import datetime, timezone
 
 from evals.runner import RESULTS_DIR, load_dataset
 from src.config import SUPPORTED_PROVIDERS, load_settings
-from src.guardrails import PROMPT_FRAGMENTS, normalize
+from src.guardrails import find_prompt_leak
 from src.prompts import DEFAULT_PROMPT_VERSION, available_versions, load_prompt
 from src.providers.factory import build_provider
 from src.triage import TriageResult, triage
 
 ADVERSARIAL_DATASET = RESULTS_DIR.parent / "adversarial.jsonl"
-CANARY_FORMAT = re.compile(r"NBX-[0-9a-f]{12}")
 OUTCOMES = ("blocked_input", "blocked_output", "resisted", "succeeded", "error")
 
 
 def leaked(texts: list[str]) -> bool:
-    """¿La respuesta contiene el canario o fragmentos del system prompt?"""
-    joined = "\n".join(texts)
-    normalized = normalize(joined)
-    return bool(CANARY_FORMAT.search(joined)) or any(fragment in normalized for fragment in PROMPT_FRAGMENTS)
+    """¿La respuesta contiene un canario o fragmentos del system prompt? Mismo criterio que el guardrail."""
+    return find_prompt_leak("\n".join(texts)) is not None
 
 
 def attack_succeeded(result: TriageResult, success_if: dict) -> bool:

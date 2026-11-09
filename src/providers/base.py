@@ -40,6 +40,7 @@ class LLMResponse:
     model: str
     input_tokens: int
     output_tokens: int
+    truncated: bool = False  # True si el modelo cortó la respuesta por llegar a max_tokens
 
 
 class LLMProvider(ABC):

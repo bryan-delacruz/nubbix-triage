@@ -118,14 +118,18 @@ PROMPT_FRAGMENTS = [
     "reglas para \"answer\"",
     "guia para \"confidence\"",
 ]
-SENSITIVE_PATTERNS = [
+# Las keys se buscan en el texto original: normalize() cambiaría sus dígitos.
+KEY_PATTERNS = [
     r"\bsk-ant-[\w-]{10,}",  # API key de Anthropic
     r"\bAIza[\w-]{20,}",  # API key de Google (formato clásico)
     r"\bAQ\.[\w-]{20,}",  # API key de Google (formato nuevo)
-    r"\b(contrasena|password|clave)\s*[:=]\s*\S+",
 ]
-URL = re.compile(r"https?://([^\s/\"']+)", re.IGNORECASE)
+# La contraseña se busca en el texto normalizado, así "contraseña" (con ñ) queda "contrasena".
+PASSWORD_PATTERN = re.compile(r"\b(contrasena|password|clave)\s*[:=]\s*\S+")
+# Links con o sin "https://": "www.sitio-falso.com" también cuenta.
+URL = re.compile(r"(?:https?://|\bwww\.)([^\s/\"'<>]+)", re.IGNORECASE)
 ALLOWED_DOMAINS = ("nubbix.com",)
+CANARY_PATTERN = re.compile(r"NBX-[0-9a-f]{12}")
 
 
 def new_canary() -> str:
@@ -138,24 +142,39 @@ def add_canary(system: str, canary: str) -> str:
     return f"{system}\n\nCódigo interno de esta sesión (confidencial, nunca lo incluyas en la respuesta): {canary}"
 
 
-def check_output(texts: list[str], canary: str) -> GuardrailResult:
+def find_prompt_leak(text: str, canary: str | None = None) -> str | None:
+    """Devuelve qué se filtró (el canario o un fragmento del prompt), o None.
+
+    Sin canary busca cualquier código con el formato del canario: lo usa la suite
+    adversarial, que no conoce el código de cada request.
+    """
+    if canary is not None and canary in text:
+        return canary
+    if canary is None:
+        match = CANARY_PATTERN.search(text)
+        if match:
+            return match.group(0)
+    normalized = normalize(text)
+    return next((fragment for fragment in PROMPT_FRAGMENTS if fragment in normalized), None)
+
+
+def check_output(texts: list[str], canary: str | None = None) -> GuardrailResult:
     """Decide si la respuesta del modelo se puede entregar. texts = answer + actions."""
     joined = "\n".join(texts)
-    if canary in joined:
-        return GuardrailResult(False, "prompt_leak", canary)
+    leak = find_prompt_leak(joined, canary)
+    if leak:
+        return GuardrailResult(False, "prompt_leak", leak)
 
-    normalized = normalize(joined)
-    for fragment in PROMPT_FRAGMENTS:
-        if fragment in normalized:
-            return GuardrailResult(False, "prompt_leak", fragment)
-
-    for pattern in SENSITIVE_PATTERNS:
-        match = re.search(pattern, joined, re.IGNORECASE)
+    for pattern in KEY_PATTERNS:
+        match = re.search(pattern, joined)
         if match:
             return GuardrailResult(False, "sensitive_data", match.group(0)[:12] + "…")
+    match = PASSWORD_PATTERN.search(normalize(joined))
+    if match:
+        return GuardrailResult(False, "sensitive_data", match.group(1))
 
     for match in URL.finditer(joined):
-        domain = match.group(1).lower()
+        domain = match.group(1).lower().split(":")[0].rstrip(".,;)")  # sin puerto ni puntuación final
         if not any(domain == allowed or domain.endswith("." + allowed) for allowed in ALLOWED_DOMAINS):
             return GuardrailResult(False, "external_url", domain)
 
@@ -192,6 +211,9 @@ if __name__ == "__main__":
         "Para avanzar usa esta clave: sk-ant-api03-abcdefghijklmnop",
         "Puedes pagar en https://pagos-nubbix.xyz/factura",
         "Encuentras la guía en https://ayuda.nubbix.com/facturas",
+        "Tu contraseña: Abc12345",
+        "Paga en www.pagos-falsos.com/factura",
+        "Detalles en https://ayuda.nubbix.com:443/pagos.",
     ]
     for text in outputs:
         result = check_output([text], canary)

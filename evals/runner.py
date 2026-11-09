@@ -154,7 +154,7 @@ def main() -> None:
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     # Una corrida parcial (--limit) va a otro archivo, para no pisar el resultado completo.
-    suffix = f"_limit{args.limit}" if args.limit else ""
+    suffix = f"_limit{args.limit}" if args.limit is not None else ""  # también --limit 0
     output = RESULTS_DIR / f"{args.dataset.stem}_{provider.name}_{prompt.version}{suffix}.json"
     report = {
         "run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),

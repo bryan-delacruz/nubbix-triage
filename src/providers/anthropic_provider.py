@@ -48,6 +48,7 @@ class AnthropicProvider(LLMProvider):
             model=self.model,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
+            truncated=response.stop_reason == "max_tokens",
         )
 
 

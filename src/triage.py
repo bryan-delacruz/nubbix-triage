@@ -15,6 +15,7 @@ from src.providers.base import LLMError, LLMProvider, LLMRefusal
 from src.schemas import TriageResponse
 
 MAX_ATTEMPTS = 3  # 1 intento + 2 reintentos
+MAX_TOKENS_CAP = 4096  # tope al ampliar max_tokens cuando una respuesta se corta
 
 
 @dataclass
@@ -23,20 +24,23 @@ class TriageResult:
 
     response: TriageResponse
     status: str  # "ok" | "invalid_response" | "api_error" | "refused" | "blocked_input" | "blocked_output"
-    attempts: int
-    input_tokens: int
-    output_tokens: int
-    latency_s: float
+    attempts: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    latency_s: float = 0.0
     error: str | None = None
     cache_hit: bool = False
 
 
 def extract_json(text: str) -> str:
-    """Quita el bloque ```json ... ``` si el modelo envolvió la respuesta en uno."""
+    """Saca el objeto JSON de la respuesta: quita el bloque ```json ... ``` y el texto alrededor."""
     text = text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1] if "\n" in text else ""
         text = text.rsplit("```", 1)[0]
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        text = text[start : end + 1]  # "Aquí está: {...}" -> "{...}"
     return text.strip()
 
 
@@ -85,51 +89,55 @@ def call_llm(query: str, provider: LLMProvider, prompt: Prompt, output_guardrail
     de respaldo con status distinto de "ok".
     """
     input_tokens = output_tokens = attempts = 0
+    max_tokens = prompt.max_tokens
     user_message = query
-    result = None
     canary = new_canary()
     system = add_canary(prompt.system, canary)
 
+    def finish(response: TriageResponse, status: str, error: str | None = None) -> TriageResult:
+        return TriageResult(
+            response=response, status=status, attempts=attempts,
+            input_tokens=input_tokens, output_tokens=output_tokens, error=error,
+        )
+
     try:
-        while result is None:
+        while True:
             attempts += 1
-            llm_response = provider.complete(system=system, user=user_message, max_tokens=prompt.max_tokens)
+            llm_response = provider.complete(system=system, user=user_message, max_tokens=max_tokens)
             input_tokens += llm_response.input_tokens
             output_tokens += llm_response.output_tokens
             try:
                 response = TriageResponse.model_validate_json(extract_json(llm_response.text))
-                check = check_output([response.answer, *response.actions], canary) if output_guardrail else None
-                if check is None or check.allowed:
-                    result = TriageResult(response, "ok", attempts, input_tokens, output_tokens, 0.0)
-                else:
-                    # No se reintenta: si el modelo filtró datos una vez, no se le da otra oportunidad.
-                    result = TriageResult(
-                        fallback_response(f"respuesta bloqueada por seguridad: {check.reason}"),
-                        "blocked_output", attempts, input_tokens, output_tokens, 0.0,
-                        error=f"guardrail de salida: {check.reason} ('{check.matched}')",
-                    )
             except ValidationError as error:
                 if attempts == MAX_ATTEMPTS:
-                    result = TriageResult(
-                        fallback_response("respuesta inválida del modelo"),
-                        "invalid_response", attempts, input_tokens, output_tokens, 0.0,
-                        error=f"la respuesta del modelo no cumple el contrato:\n{format_errors(error)}",
-                    )
-                else:
-                    print(f"Intento {attempts}/{MAX_ATTEMPTS} inválido, reintentando:\n{format_errors(error)}", file=sys.stderr)
-                    user_message = build_retry_message(query, llm_response.text, error)
+                    detail = f"la respuesta del modelo no cumple el contrato:\n{format_errors(error)}"
+                    return finish(fallback_response("respuesta inválida del modelo"), "invalid_response", detail)
+                print(f"Intento {attempts}/{MAX_ATTEMPTS} inválido, reintentando:\n{format_errors(error)}", file=sys.stderr)
+                user_message = build_retry_message(query, llm_response.text, error)
+                if llm_response.truncated:
+                    # Reintentar con el mismo tope volvería a cortar la respuesta: se duplica.
+                    max_tokens = min(max_tokens * 2, MAX_TOKENS_CAP)
+                continue
+
+            check = check_output([response.answer, *response.actions], canary) if output_guardrail else None
+            if check is not None and not check.allowed:
+                # No se reintenta: si el modelo filtró datos una vez, no se le da otra oportunidad.
+                detail = f"guardrail de salida: {check.reason} ('{check.matched}')"
+                return finish(fallback_response(f"respuesta bloqueada por seguridad: {check.reason}"), "blocked_output", detail)
+            return finish(response, "ok")
     except LLMRefusal as error:
         # Va antes que LLMError: LLMRefusal es un tipo de LLMError.
-        result = TriageResult(
-            fallback_response("el modelo se negó a responder"),
-            "refused", attempts, input_tokens, output_tokens, 0.0, error=str(error),
-        )
+        return finish(fallback_response("el modelo se negó a responder"), "refused", str(error))
     except LLMError as error:
-        result = TriageResult(
-            fallback_response("error de la API del proveedor"),
-            "api_error", attempts, input_tokens, output_tokens, 0.0, error=str(error),
-        )
-    return result
+        return finish(fallback_response("error de la API del proveedor"), "api_error", str(error))
+
+
+def read_cache(key: str, cache_dir: Path | None) -> TriageResponse | None:
+    """Respuesta guardada, solo si sigue pasando el guardrail de salida actual."""
+    cached = cache.get(key, cache_dir) if cache_dir else None
+    if cached and check_output([cached.answer, *cached.actions]).allowed:
+        return cached
+    return None
 
 
 def triage(
@@ -146,26 +154,29 @@ def triage(
     al LLM y se devuelve la respuesta de respaldo. Con metrics_path=None no registra nada.
     guardrails=False apaga los 2 guardrails: solo para medir su efecto en la suite adversarial.
     Con cache_dir, una consulta repetida devuelve la respuesta guardada sin llamar al LLM.
-    Los evals no usan caché: necesitan medir al modelo en cada corrida.
+    La caché solo se usa con los guardrails activos, y los evals no la usan.
     """
     start = time.perf_counter()
+    if not guardrails:
+        cache_dir = None  # una respuesta sin revisar nunca entra ni sale de la caché
     check = check_input(query) if guardrails else None
-    key = cache.cache_key(provider.name, provider.model, prompt.system, query)
-    cached = cache.get(key, cache_dir) if cache_dir else None
 
     if check is not None and not check.allowed:
         result = TriageResult(
-            fallback_response(f"consulta bloqueada por seguridad: {check.reason}"),
-            "blocked_input", 0, 0, 0, 0.0,
+            response=fallback_response(f"consulta bloqueada por seguridad: {check.reason}"),
+            status="blocked_input",
             error=f"guardrail de entrada: {check.reason} ('{check.matched}')",
         )
-    elif cached:
-        result = TriageResult(cached, "ok", 0, 0, 0, 0.0, cache_hit=True)
     else:
-        result = call_llm(query, provider, prompt, output_guardrail=guardrails)
-        # Solo se guardan respuestas válidas que pasaron los guardrails.
-        if cache_dir and result.status == "ok":
-            cache.put(key, result.response, cache_dir)
+        key = cache.cache_key(provider.name, provider.model, prompt.system, query)
+        cached = read_cache(key, cache_dir)
+        if cached:
+            result = TriageResult(response=cached, status="ok", cache_hit=True)
+        else:
+            result = call_llm(query, provider, prompt, output_guardrail=guardrails)
+            # Solo se guardan respuestas válidas que pasaron los guardrails.
+            if cache_dir and result.status == "ok":
+                cache.put(key, result.response, cache_dir)
 
     result.latency_s = time.perf_counter() - start
     if metrics_path is not None:

@@ -25,10 +25,13 @@ def cache_key(provider: str, model: str, system_prompt: str, query: str) -> str:
 
 
 def get(key: str, cache_dir: Path = CACHE_DIR) -> TriageResponse | None:
+    """Respuesta guardada, o None si no existe o el archivo está dañado (se trata como "no hay")."""
     path = cache_dir / f"{key}.json"
-    if not path.exists():
+    try:
+        return TriageResponse.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        # OSError: no existe o no se puede leer. ValueError: incluye el ValidationError de Pydantic.
         return None
-    return TriageResponse.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def put(key: str, response: TriageResponse, cache_dir: Path = CACHE_DIR) -> None:
