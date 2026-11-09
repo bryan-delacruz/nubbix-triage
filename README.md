@@ -149,13 +149,36 @@ Imprimen el score global y por categoría (o la tasa de ataques mitigados) y gua
 
 Suite adversarial (10 ataques de injection, jailbreak y exfiltración): con guardrails, **10/10 mitigados** en los 2 modelos; sin guardrails, Gemini cae en 3 ([docs/security.md](docs/security.md)).
 
-## Recomendaciones
+## Qué modelo usar
 
-- **Prompt:** usar `v2` (few-shot + reglas). Le gana a `v1` en los 2 modelos: 97,5 % contra 90–92,5 %, y resuelve los casos ambiguos.
-- **Modelo para producción:** `claude-haiku-5-5`. Con v2 empata en calidad con Gemini, es 13 % más barato por ticket pagando, su confianza separa aciertos de errores y su latencia es estable.
-- **Modelo para desarrollo y pruebas:** `gemini-3.1-flash-lite` en la capa gratuita ($0). No usarlo con datos reales de clientes: en esa capa Google puede usar los datos para mejorar sus productos.
-- **Guardrails siempre activos:** sin ellos, Gemini cayó en 3 de 10 ataques (por ejemplo, le prometió a un cliente que su reintegro "ya fue aprobado").
-- **Usar `confidence`** para priorizar la revisión humana: con Haiku, debajo de ~0,7 conviene revisar con más cuidado.
+**Recomendación: `claude-haiku-5-5` con el prompt `v2` para producción, y `gemini-3.1-flash-lite` (capa gratuita) solo para desarrollo y pruebas.**
+
+Con `v2` los 2 modelos aciertan lo mismo (97,5 %), así que la elección se decide por costo, confianza, latencia, seguridad y privacidad:
+
+| Criterio | Haiku 5.5 | Gemini 3.1 Flash-Lite | Gana |
+|---|---|---|---|
+| Accuracy con v2 | 97,5 % | 97,5 % | Empate |
+| Costo por ticket pagando | $0,00040 | $0,00046 | **Haiku** (13 % menos) |
+| Costo en desarrollo | ~$0,016 por corrida de evals | $0 (capa gratuita) | **Gemini** |
+| Confianza útil para priorizar | Sí: 0,86 en aciertos y 0,70 en errores | No: 0,95 también en errores | **Haiku** |
+| Latencia máxima | 4,6 s | 15,8 s (rate limit de la capa gratuita) | **Haiku** |
+| Ataques sin guardrails | Resistió 10/10 | Cayó en 3/10 | **Haiku** |
+| Datos de clientes reales | Sí | Solo en capa paga: en la gratuita Google usa los datos | **Haiku** |
+
+```mermaid
+flowchart TD
+    A{¿Datos reales de clientes?} -- No: desarrollo, pruebas, evals --> G[Gemini 3.1 Flash-Lite<br/>capa gratuita, $0]
+    A -- Sí: producción --> B{¿Hay que usar Google Cloud<br/>por contrato o facturación?}
+    B -- No --> H[Haiku 5.5 · v2<br/>recomendado]
+    B -- Sí --> GP[Gemini 3.1 Flash-Lite capa paga · v2<br/>misma calidad, ~15 % más caro,<br/>sin confianza útil]
+```
+
+**Por qué el proveedor por defecto del código es Gemini:** porque el `.env` está pensado para desarrollar y correr evals gratis. En producción se cambia una línea: `LLM_PROVIDER=anthropic`.
+
+**Con cualquier modelo:**
+- Usar el prompt `v2`: le gana a `v1` en los 2 modelos (97,5 % contra 90–92,5 %) y resuelve los casos ambiguos.
+- Dejar los guardrails siempre activos: con ellos, los 2 modelos mitigan 10/10 ataques.
+- Con Haiku, revisar con más cuidado los tickets con `confidence` menor a ~0,7.
 
 ## Limitaciones
 
