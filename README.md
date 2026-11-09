@@ -56,27 +56,28 @@ cp .env.example .env    # completar las API keys
 
 Cada terminal nueva necesita `source .venv/bin/activate` (debe verse `(.venv)` en el prompt).
 
-## Uso
+## Modos de uso
+
+Hay 2 formas de clasificar tickets. Las 2 usan la misma lógica (`triage()`), devuelven el mismo JSON y registran las mismas métricas.
+
+| | 1. Comando (CLI) | 2. API HTTP (FastAPI) |
+|---|---|---|
+| Para qué | Probar a mano o desde un script | Integrar con otro sistema (el de tickets de Nubbix) |
+| Cómo se llama | `python -m src.main "ticket"` | `POST /triage` con `{"query": "ticket"}` |
+| Dónde sale el JSON | stdout | Cuerpo de la respuesta HTTP |
+| Cómo saber si falló | Código de salida `1` + mensaje en stderr | Header `X-Triage-Status` |
 
 ```mermaid
 flowchart LR
-    subgraph Comandos
-        CLI["python -m src.main 'ticket'"]
-        API["POST /triage<br/>(uvicorn src.api:app)"]
-        EV["python -m evals.runner"]
-        ADV["python -m evals.adversarial"]
-    end
-    CLI --> T[triage]
-    API --> T
-    EV --> T
-    ADV --> T
-    T --> OUT1[JSON por stdout<br/>o respuesta HTTP]
-    T --> OUT2[(data/metrics.jsonl)]
-    EV --> OUT3[(evals/results/*.json)]
-    ADV --> OUT3
+    CLI["1. CLI<br/>python -m src.main 'ticket'"] --> T[triage]
+    API["2. API<br/>POST /triage"] --> T
+    T --> J[JSON del contrato]
+    T --> M[(data/metrics.jsonl)]
 ```
 
-### Clasificar un ticket
+Si algo falla o se bloquea, los 2 modos devuelven igual un JSON de respaldo con `confidence: 0`, para revisión humana.
+
+### 1. Comando (CLI)
 
 ```bash
 python -m src.main "me cobraron dos veces la suscripción de este mes"
@@ -90,24 +91,40 @@ python -m src.main "el reporte de ventas no carga" --provider anthropic --prompt
 | `--no-cache` | — | usa la caché |
 
 - **stdout** recibe solo el JSON, listo para otro sistema. Los avisos y errores van a **stderr**.
-- **Código de salida:** `0` si el modelo respondió bien. `1` si falló o se bloqueó: igual se imprime un JSON de respaldo con `confidence: 0` para revisión humana.
-- **Métricas:** cada request agrega una línea a `data/metrics.jsonl` con tokens, latencia, costo y los precios usados. Para leerlas: `jq . data/metrics.jsonl`.
+- **Código de salida:** `0` si el modelo respondió bien; `1` si falló o se bloqueó.
 
-### API HTTP (extra credit)
+### 2. API HTTP (FastAPI)
 
-La misma lógica, para que otro sistema la llame por HTTP:
+Levantar el servidor (la terminal queda ocupada; `Ctrl + C` para pararlo):
 
 ```bash
 uvicorn src.api:app --reload
 ```
 
+Desde otra terminal:
+
 ```bash
 curl -X POST localhost:8000/triage -H "Content-Type: application/json" -d '{"query": "me cobraron dos veces"}'
 ```
 
-Body: `query` (obligatorio), `provider` y `prompt` (opcionales, mismos valores que en la CLI). Siempre responde el contrato JSON; el header `X-Triage-Status` indica `ok` o el motivo del respaldo (`blocked_input`, `api_error`, etc.). Documentación interactiva en http://localhost:8000/docs.
+O desde el navegador: http://localhost:8000/docs → `POST /triage` → **Try it out**.
 
-### Correr los evals
+| Endpoint | Qué hace |
+|---|---|
+| `POST /triage` | Body: `query` (obligatorio), `provider` y `prompt` (opcionales, mismos valores que en la CLI). Responde el JSON del contrato |
+| `GET /health` | Devuelve `{"status": "ok"}` si el servidor está activo |
+
+El header `X-Triage-Status` vale `ok` o el motivo del respaldo: `blocked_input`, `blocked_output`, `api_error`, `refused`, `invalid_response` o `config_error`.
+
+### Métricas
+
+Cada request (por CLI o por API) agrega una línea a `data/metrics.jsonl` con tokens, latencia, costo y los precios usados.
+
+```bash
+jq . data/metrics.jsonl
+```
+
+### Evals
 
 ```bash
 python -m evals.runner --provider anthropic --prompt v2
