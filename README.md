@@ -62,13 +62,15 @@ Cada terminal nueva necesita `source .venv/bin/activate` (debe verse `(.venv)` e
 flowchart LR
     subgraph Comandos
         CLI["python -m src.main 'ticket'"]
+        API["POST /triage<br/>(uvicorn src.api:app)"]
         EV["python -m evals.runner"]
         ADV["python -m evals.adversarial"]
     end
     CLI --> T[triage]
+    API --> T
     EV --> T
     ADV --> T
-    T --> OUT1[JSON por stdout]
+    T --> OUT1[JSON por stdout<br/>o respuesta HTTP]
     T --> OUT2[(data/metrics.jsonl)]
     EV --> OUT3[(evals/results/*.json)]
     ADV --> OUT3
@@ -90,6 +92,20 @@ python -m src.main "el reporte de ventas no carga" --provider anthropic --prompt
 - **stdout** recibe solo el JSON, listo para otro sistema. Los avisos y errores van a **stderr**.
 - **Código de salida:** `0` si el modelo respondió bien. `1` si falló o se bloqueó: igual se imprime un JSON de respaldo con `confidence: 0` para revisión humana.
 - **Métricas:** cada request agrega una línea a `data/metrics.jsonl` con tokens, latencia, costo y los precios usados. Para leerlas: `jq . data/metrics.jsonl`.
+
+### API HTTP (extra credit)
+
+La misma lógica, para que otro sistema la llame por HTTP:
+
+```bash
+uvicorn src.api:app --reload
+```
+
+```bash
+curl -X POST localhost:8000/triage -H "Content-Type: application/json" -d '{"query": "me cobraron dos veces"}'
+```
+
+Body: `query` (obligatorio), `provider` y `prompt` (opcionales, mismos valores que en la CLI). Siempre responde el contrato JSON; el header `X-Triage-Status` indica `ok` o el motivo del respaldo (`blocked_input`, `api_error`, etc.). Documentación interactiva en http://localhost:8000/docs.
 
 ### Correr los evals
 
@@ -120,7 +136,7 @@ Imprimen el score global y por categoría (o la tasa de ataques mitigados) y gua
 ## Estructura
 
 ```text
-src/        CLI, orquestación, contrato, guardrails, métricas, precios, caché y proveedores
+src/        CLI, API, orquestación, contrato, guardrails, métricas, precios, caché y proveedores
 prompts/    v1.yaml (zero-shot) y v2.yaml (few-shot + reglas)
 evals/      dataset, ataques, runners y resultados
 data/       metrics.jsonl (append-only) y caché local
