@@ -266,10 +266,24 @@ python -m src.main "me cobraron dos veces la suscripción de este mes" --provide
 |---|---|---|
 | `--provider` | `gemini`, `anthropic` | `LLM_PROVIDER` en `.env` (`gemini`) |
 | `--prompt` | `v1`, `v2` (archivos de `prompts/`) | `v2` |
+| `--no-cache` | (sin valor) | Usa la caché |
 
 - **stdout** recibe solo el JSON del contrato, listo para otro sistema. Los avisos y errores van a **stderr**.
 - **Código de salida:** `0` si el modelo respondió bien; `1` si falló. En ese caso igual se imprime un JSON de respaldo con `confidence: 0` para revisión humana.
 - Cada ejecución agrega una línea a `data/metrics.jsonl`. Para leerlas: `jq . data/metrics.jsonl`.
+
+### Caché (extra credit)
+
+Si llega la misma consulta con el mismo proveedor, modelo y prompt, la CLI devuelve la respuesta guardada sin llamar al LLM: cuesta $0 y tarda ~1 ms. La clave es un hash MD5 de esos 4 datos (los espacios al inicio y al final de la consulta no cuentan), así que editar un prompt o cambiar de modelo invalida la caché sola. Solo se guardan respuestas válidas que pasaron los guardrails.
+
+| | 1ª consulta | 2ª consulta igual |
+|---|---|---|
+| `cache_hit` en `data/metrics.jsonl` | `false` | `true` |
+| Tokens | 1.294 | 0 |
+| Costo | $0,00045 | $0 |
+| Latencia | 4,2 s | 0,001 s |
+
+Las entradas se guardan en `data/cache/<md5>.json` (fuera de git). Los evals no usan caché, porque tienen que medir al modelo en cada corrida. Para saltearla en la CLI: `--no-cache`.
 
 ### Correr los evals
 

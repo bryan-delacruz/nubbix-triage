@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from src import cache
 from src.guardrails import add_canary, check_input, check_output, new_canary
 from src.metrics import METRICS_PATH, build_record, log_request
 from src.prompts import Prompt
@@ -27,6 +28,7 @@ class TriageResult:
     output_tokens: int
     latency_s: float
     error: str | None = None
+    cache_hit: bool = False
 
 
 def extract_json(text: str) -> str:
@@ -136,23 +138,34 @@ def triage(
     prompt: Prompt,
     metrics_path: Path | None = METRICS_PATH,
     guardrails: bool = True,
+    cache_dir: Path | None = None,
 ) -> TriageResult:
     """Clasifica una consulta y registra una línea de métricas.
 
     Primero pasa por el guardrail de entrada: si detecta un ataque, la consulta no llega
     al LLM y se devuelve la respuesta de respaldo. Con metrics_path=None no registra nada.
     guardrails=False apaga los 2 guardrails: solo para medir su efecto en la suite adversarial.
+    Con cache_dir, una consulta repetida devuelve la respuesta guardada sin llamar al LLM.
+    Los evals no usan caché: necesitan medir al modelo en cada corrida.
     """
     start = time.perf_counter()
     check = check_input(query) if guardrails else None
-    if check is None or check.allowed:
-        result = call_llm(query, provider, prompt, output_guardrail=guardrails)
-    else:
+    key = cache.cache_key(provider.name, provider.model, prompt.system, query)
+    cached = cache.get(key, cache_dir) if cache_dir else None
+
+    if check is not None and not check.allowed:
         result = TriageResult(
             fallback_response(f"consulta bloqueada por seguridad: {check.reason}"),
             "blocked_input", 0, 0, 0, 0.0,
             error=f"guardrail de entrada: {check.reason} ('{check.matched}')",
         )
+    elif cached:
+        result = TriageResult(cached, "ok", 0, 0, 0, 0.0, cache_hit=True)
+    else:
+        result = call_llm(query, provider, prompt, output_guardrail=guardrails)
+        # Solo se guardan respuestas válidas que pasaron los guardrails.
+        if cache_dir and result.status == "ok":
+            cache.put(key, result.response, cache_dir)
 
     result.latency_s = time.perf_counter() - start
     if metrics_path is not None:
@@ -167,6 +180,7 @@ def triage(
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
             latency_s=result.latency_s,
+            cache_hit=result.cache_hit,
         )
         log_request(record, metrics_path)
     return result

@@ -15,3 +15,6 @@ __pycache__/
 
 # Corridas parciales de evals (--limit): solo pruebas rápidas
 evals/results/*_limit*.json
+
+# Caché local de respuestas (se regenera sola)
+data/cache/

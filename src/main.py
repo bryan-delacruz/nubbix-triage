@@ -3,6 +3,7 @@
 import argparse
 import sys
 
+from src.cache import CACHE_DIR
 from src.config import SUPPORTED_PROVIDERS, load_settings
 from src.prompts import DEFAULT_PROMPT_VERSION, available_versions, load_prompt
 from src.providers.factory import build_provider
@@ -26,6 +27,7 @@ def parse_args(default_provider: str) -> argparse.Namespace:
         default=DEFAULT_PROMPT_VERSION,
         help=f"Versión de prompt de prompts/ (por defecto: {DEFAULT_PROMPT_VERSION})",
     )
+    parser.add_argument("--no-cache", action="store_true", help="Llamar siempre al LLM, sin usar la caché")
     return parser.parse_args()
 
 
@@ -42,7 +44,7 @@ def main() -> None:
         print(fallback_response("configuración incompleta").model_dump_json(indent=2))
         sys.exit(1)
 
-    result = triage(args.query, provider, prompt)
+    result = triage(args.query, provider, prompt, cache_dir=None if args.no_cache else CACHE_DIR)
     if result.error:
         print(f"Error: {result.error}", file=sys.stderr)
     print(result.response.model_dump_json(indent=2))

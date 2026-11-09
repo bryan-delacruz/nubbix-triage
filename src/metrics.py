@@ -5,6 +5,7 @@ Cada campo responde una pregunta concreta:
 - provider, model: ¿qué modelo generó este costo y esta latencia?
 - prompt_version: ¿con qué versión de prompt? (permite comparar costo entre versiones)
 - status, attempts: ¿funcionó? ¿cuántas llamadas al LLM hicieron falta?
+- cache_hit: ¿se respondió desde la caché, sin llamar al LLM? (costo $0)
 - category: ¿qué tipo de ticket fue? (permite ver costo y latencia por categoría)
 - prompt_tokens, completion_tokens, total_tokens: ¿cuánto consumió?
 - latency_s: ¿cuánto tardó, sumando todos los intentos?
@@ -32,6 +33,7 @@ def build_record(
     input_tokens: int,
     output_tokens: int,
     latency_s: float,
+    cache_hit: bool = False,
 ) -> dict:
     price = PRICES.get(model)
     return {
@@ -41,6 +43,7 @@ def build_record(
         "prompt_version": prompt_version,
         "status": status,
         "attempts": attempts,
+        "cache_hit": cache_hit,
         "category": category,
         "prompt_tokens": input_tokens,
         "completion_tokens": output_tokens,
