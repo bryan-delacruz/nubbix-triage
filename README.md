@@ -136,6 +136,19 @@ python -m evals.adversarial --provider gemini --delay 4            # 10 ataques,
 
 Imprimen el score global y por categoría (o la tasa de ataques mitigados) y guardan el detalle en `evals/results/`. `--limit N` corre solo los primeros N casos.
 
+## Resultados de evals
+
+40 tickets etiquetados ([`evals/dataset.jsonl`](evals/dataset.jsonl)), 10 por categoría. Resultados completos en [`evals/results/`](evals/results/) y análisis en [docs/evals.md](docs/evals.md).
+
+| Modelo · prompt | Global | billing | technical | account | other | JSON válido | Costo por ticket (pago) |
+|---|---|---|---|---|---|---|---|
+| Haiku 5.5 · v1 | 90,0 % | 100 % | 80 % | 100 % | 80 % | 100 % | $0,00032 |
+| **Haiku 5.5 · v2** | **97,5 %** | 100 % | 90 % | 100 % | 100 % | 100 % | $0,00040 |
+| Gemini 3.1 Flash-Lite · v1 | 92,5 % | 100 % | 100 % | 90 % | 80 % | 100 % | $0,00033 |
+| **Gemini 3.1 Flash-Lite · v2** | **97,5 %** | 100 % | 100 % | 90 % | 100 % | 100 % | $0,00046 |
+
+Suite adversarial (10 ataques de injection, jailbreak y exfiltración): con guardrails, **10/10 mitigados** en los 2 modelos; sin guardrails, Gemini cae en 3 ([docs/security.md](docs/security.md)).
+
 ## Recomendaciones
 
 - **Prompt:** usar `v2` (few-shot + reglas). Le gana a `v1` en los 2 modelos: 97,5 % contra 90–92,5 %, y resuelve los casos ambiguos.
