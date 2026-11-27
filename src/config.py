@@ -5,16 +5,19 @@ from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
-SUPPORTED_PROVIDERS = ("gemini", "anthropic")
+SUPPORTED_PROVIDERS = ("gemini", "anthropic", "openai")
 
 
 @dataclass(frozen=True)
 class Settings:
     gemini_api_key: str | None
     anthropic_api_key: str | None
+    openai_api_key: str | None
     default_provider: str
     gemini_model: str
     anthropic_model: str
+    openai_model: str
+    openai_reasoning_effort: str
 
 
 def load_settings() -> Settings:
@@ -30,9 +33,12 @@ def load_settings() -> Settings:
     return Settings(
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
+        openai_api_key=os.getenv("OPENAI_API_KEY") or None,
         default_provider=provider,
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
         anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5"),
+        openai_model=os.getenv("OPENAI_MODEL", "gpt-6-luna"),
+        openai_reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT", "none").strip().lower(),
     )
 
 
@@ -48,3 +54,4 @@ if __name__ == "__main__":
     print(f"Proveedor por defecto: {settings.default_provider}")
     print(f"Gemini:    modelo={settings.gemini_model}  key={mask(settings.gemini_api_key)}")
     print(f"Anthropic: modelo={settings.anthropic_model}  key={mask(settings.anthropic_api_key)}")
+    print(f"OpenAI:    modelo={settings.openai_model}  razonamiento={settings.openai_reasoning_effort}  key={mask(settings.openai_api_key)}")

@@ -11,6 +11,7 @@ PRICES_VERIFIED_ON = "2026-10-29"
 
 GEMINI_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing"
 ANTHROPIC_PRICING_URL = "https://platform.claude.com/docs/en/about-claude/pricing"
+OPENAI_PRICING_URL = "https://developers.openai.com/api/docs/pricing"
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,9 @@ PRICES: dict[str, ModelPrice] = {
     "gemini-2.5-flash-lite": ModelPrice(0.10, 0.40, GEMINI_PRICING_URL),
     # Precio para prompts de hasta 100.000 tokens; nuestros tickets usan menos de 2.000.
     "claude-haiku-5-5": ModelPrice(0.10, 0.50, ANTHROPIC_PRICING_URL),
+    # Verificado el 2026-11-26. Los tokens de razonamiento se cobran como salida.
+    "gpt-6-luna": ModelPrice(0.10, 0.50, OPENAI_PRICING_URL),
+    "gpt-5.6-luna": ModelPrice(0.20, 1.20, OPENAI_PRICING_URL),
 }
 
 
