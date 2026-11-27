@@ -1,0 +1,752 @@
+{
+  "run_at": "2026-11-27T04:54:13+00:00",
+  "provider": "openai",
+  "model": "gpt-6-luna",
+  "prompt_version": "v1",
+  "dataset": "dataset.jsonl",
+  "summary": {
+    "cases": 40,
+    "accuracy": 0.95,
+    "valid_json_rate": 1.0,
+    "by_category": {
+      "billing": {
+        "n": 10,
+        "accuracy": 1.0
+      },
+      "technical": {
+        "n": 10,
+        "accuracy": 0.9
+      },
+      "account": {
+        "n": 10,
+        "accuracy": 1.0
+      },
+      "other": {
+        "n": 10,
+        "accuracy": 0.9
+      }
+    },
+    "by_tag": {
+      "ambiguous": {
+        "n": 5,
+        "accuracy": 0.8
+      },
+      "clear": {
+        "n": 25,
+        "accuracy": 0.96
+      },
+      "english": {
+        "n": 1,
+        "accuracy": 1.0
+      },
+      "informal": {
+        "n": 6,
+        "accuracy": 1.0
+      },
+      "multi-topic": {
+        "n": 2,
+        "accuracy": 1.0
+      },
+      "typos": {
+        "n": 3,
+        "accuracy": 1.0
+      },
+      "vague": {
+        "n": 2,
+        "accuracy": 1.0
+      }
+    },
+    "avg_confidence_correct": 0.951578947368421,
+    "avg_confidence_wrong": 0.97,
+    "retries": 0,
+    "avg_latency_s": 1.9627,
+    "total_tokens": 20464,
+    "total_cost_usd": 0.003932
+  },
+  "cases": [
+    {
+      "id": "billing-01",
+      "tags": [
+        "clear"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 407,
+      "output_tokens": 145,
+      "latency_s": 4.479,
+      "cost_usd": 0.0001132,
+      "error": null
+    },
+    {
+      "id": "billing-02",
+      "tags": [
+        "clear"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 397,
+      "output_tokens": 119,
+      "latency_s": 2.159,
+      "cost_usd": 9.92e-05,
+      "error": null
+    },
+    {
+      "id": "billing-03",
+      "tags": [
+        "clear"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 397,
+      "output_tokens": 98,
+      "latency_s": 1.753,
+      "cost_usd": 8.87e-05,
+      "error": null
+    },
+    {
+      "id": "billing-04",
+      "tags": [
+        "clear"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 397,
+      "output_tokens": 126,
+      "latency_s": 2.299,
+      "cost_usd": 0.0001027,
+      "error": null
+    },
+    {
+      "id": "billing-05",
+      "tags": [
+        "clear"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 398,
+      "output_tokens": 158,
+      "latency_s": 2.478,
+      "cost_usd": 0.0001188,
+      "error": null
+    },
+    {
+      "id": "billing-06",
+      "tags": [
+        "clear"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 396,
+      "output_tokens": 114,
+      "latency_s": 1.695,
+      "cost_usd": 9.66e-05,
+      "error": null
+    },
+    {
+      "id": "billing-07",
+      "tags": [
+        "informal",
+        "typos"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 398,
+      "output_tokens": 159,
+      "latency_s": 2.272,
+      "cost_usd": 0.0001193,
+      "error": null
+    },
+    {
+      "id": "billing-08",
+      "tags": [
+        "informal"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 403,
+      "output_tokens": 113,
+      "latency_s": 2.353,
+      "cost_usd": 9.68e-05,
+      "error": null
+    },
+    {
+      "id": "billing-09",
+      "tags": [
+        "ambiguous"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 391,
+      "output_tokens": 130,
+      "latency_s": 2.14,
+      "cost_usd": 0.0001041,
+      "error": null
+    },
+    {
+      "id": "billing-10",
+      "tags": [
+        "multi-topic"
+      ],
+      "expected": "billing",
+      "predicted": "billing",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 395,
+      "output_tokens": 141,
+      "latency_s": 2.284,
+      "cost_usd": 0.00011,
+      "error": null
+    },
+    {
+      "id": "technical-01",
+      "tags": [
+        "clear"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 397,
+      "output_tokens": 120,
+      "latency_s": 2.099,
+      "cost_usd": 9.97e-05,
+      "error": null
+    },
+    {
+      "id": "technical-02",
+      "tags": [
+        "clear"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.94,
+      "attempts": 1,
+      "input_tokens": 389,
+      "output_tokens": 154,
+      "latency_s": 2.126,
+      "cost_usd": 0.0001159,
+      "error": null
+    },
+    {
+      "id": "technical-03",
+      "tags": [
+        "clear"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 395,
+      "output_tokens": 150,
+      "latency_s": 1.936,
+      "cost_usd": 0.0001145,
+      "error": null
+    },
+    {
+      "id": "technical-04",
+      "tags": [
+        "clear"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.93,
+      "attempts": 1,
+      "input_tokens": 392,
+      "output_tokens": 139,
+      "latency_s": 1.939,
+      "cost_usd": 0.0001087,
+      "error": null
+    },
+    {
+      "id": "technical-05",
+      "tags": [
+        "clear"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.97,
+      "attempts": 1,
+      "input_tokens": 391,
+      "output_tokens": 122,
+      "latency_s": 1.691,
+      "cost_usd": 0.0001001,
+      "error": null
+    },
+    {
+      "id": "technical-06",
+      "tags": [
+        "clear"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 394,
+      "output_tokens": 137,
+      "latency_s": 2.007,
+      "cost_usd": 0.0001079,
+      "error": null
+    },
+    {
+      "id": "technical-07",
+      "tags": [
+        "informal"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.97,
+      "attempts": 1,
+      "input_tokens": 388,
+      "output_tokens": 110,
+      "latency_s": 1.876,
+      "cost_usd": 9.38e-05,
+      "error": null
+    },
+    {
+      "id": "technical-08",
+      "tags": [
+        "informal",
+        "typos"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.96,
+      "attempts": 1,
+      "input_tokens": 395,
+      "output_tokens": 133,
+      "latency_s": 2.05,
+      "cost_usd": 0.000106,
+      "error": null
+    },
+    {
+      "id": "technical-09",
+      "tags": [
+        "ambiguous"
+      ],
+      "expected": "technical",
+      "predicted": "billing",
+      "correct": false,
+      "status": "ok",
+      "confidence": 0.97,
+      "attempts": 1,
+      "input_tokens": 398,
+      "output_tokens": 148,
+      "latency_s": 1.967,
+      "cost_usd": 0.0001138,
+      "error": null
+    },
+    {
+      "id": "technical-10",
+      "tags": [
+        "ambiguous"
+      ],
+      "expected": "technical",
+      "predicted": "technical",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 398,
+      "output_tokens": 122,
+      "latency_s": 2.29,
+      "cost_usd": 0.0001008,
+      "error": null
+    },
+    {
+      "id": "account-01",
+      "tags": [
+        "clear"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.97,
+      "attempts": 1,
+      "input_tokens": 389,
+      "output_tokens": 133,
+      "latency_s": 1.914,
+      "cost_usd": 0.0001054,
+      "error": null
+    },
+    {
+      "id": "account-02",
+      "tags": [
+        "clear"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.91,
+      "attempts": 1,
+      "input_tokens": 391,
+      "output_tokens": 137,
+      "latency_s": 2.099,
+      "cost_usd": 0.0001076,
+      "error": null
+    },
+    {
+      "id": "account-03",
+      "tags": [
+        "clear"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.97,
+      "attempts": 1,
+      "input_tokens": 395,
+      "output_tokens": 108,
+      "latency_s": 2.109,
+      "cost_usd": 9.35e-05,
+      "error": null
+    },
+    {
+      "id": "account-04",
+      "tags": [
+        "clear"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.93,
+      "attempts": 1,
+      "input_tokens": 394,
+      "output_tokens": 104,
+      "latency_s": 1.723,
+      "cost_usd": 9.14e-05,
+      "error": null
+    },
+    {
+      "id": "account-05",
+      "tags": [
+        "clear"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 395,
+      "output_tokens": 126,
+      "latency_s": 1.821,
+      "cost_usd": 0.0001025,
+      "error": null
+    },
+    {
+      "id": "account-06",
+      "tags": [
+        "clear"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.88,
+      "attempts": 1,
+      "input_tokens": 394,
+      "output_tokens": 100,
+      "latency_s": 1.797,
+      "cost_usd": 8.94e-05,
+      "error": null
+    },
+    {
+      "id": "account-07",
+      "tags": [
+        "informal",
+        "typos"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.96,
+      "attempts": 1,
+      "input_tokens": 394,
+      "output_tokens": 113,
+      "latency_s": 1.572,
+      "cost_usd": 9.59e-05,
+      "error": null
+    },
+    {
+      "id": "account-08",
+      "tags": [
+        "informal"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.91,
+      "attempts": 1,
+      "input_tokens": 393,
+      "output_tokens": 122,
+      "latency_s": 1.841,
+      "cost_usd": 0.0001003,
+      "error": null
+    },
+    {
+      "id": "account-09",
+      "tags": [
+        "multi-topic"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 392,
+      "output_tokens": 135,
+      "latency_s": 2.047,
+      "cost_usd": 0.0001067,
+      "error": null
+    },
+    {
+      "id": "account-10",
+      "tags": [
+        "ambiguous"
+      ],
+      "expected": "account",
+      "predicted": "account",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 394,
+      "output_tokens": 125,
+      "latency_s": 1.878,
+      "cost_usd": 0.0001019,
+      "error": null
+    },
+    {
+      "id": "other-01",
+      "tags": [
+        "clear"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.87,
+      "attempts": 1,
+      "input_tokens": 393,
+      "output_tokens": 110,
+      "latency_s": 1.641,
+      "cost_usd": 9.43e-05,
+      "error": null
+    },
+    {
+      "id": "other-02",
+      "tags": [
+        "clear"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 391,
+      "output_tokens": 68,
+      "latency_s": 1.508,
+      "cost_usd": 7.31e-05,
+      "error": null
+    },
+    {
+      "id": "other-03",
+      "tags": [
+        "clear"
+      ],
+      "expected": "other",
+      "predicted": "billing",
+      "correct": false,
+      "status": "ok",
+      "confidence": 0.97,
+      "attempts": 1,
+      "input_tokens": 394,
+      "output_tokens": 117,
+      "latency_s": 1.763,
+      "cost_usd": 9.79e-05,
+      "error": null
+    },
+    {
+      "id": "other-04",
+      "tags": [
+        "clear"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.93,
+      "attempts": 1,
+      "input_tokens": 390,
+      "output_tokens": 89,
+      "latency_s": 1.657,
+      "cost_usd": 8.35e-05,
+      "error": null
+    },
+    {
+      "id": "other-05",
+      "tags": [
+        "clear"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.44,
+      "attempts": 1,
+      "input_tokens": 389,
+      "output_tokens": 94,
+      "latency_s": 1.816,
+      "cost_usd": 8.59e-05,
+      "error": null
+    },
+    {
+      "id": "other-06",
+      "tags": [
+        "clear"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.99,
+      "attempts": 1,
+      "input_tokens": 395,
+      "output_tokens": 73,
+      "latency_s": 1.408,
+      "cost_usd": 7.6e-05,
+      "error": null
+    },
+    {
+      "id": "other-07",
+      "tags": [
+        "vague"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 1.0,
+      "attempts": 1,
+      "input_tokens": 379,
+      "output_tokens": 39,
+      "latency_s": 1.432,
+      "cost_usd": 5.74e-05,
+      "error": null
+    },
+    {
+      "id": "other-08",
+      "tags": [
+        "vague"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.98,
+      "attempts": 1,
+      "input_tokens": 382,
+      "output_tokens": 80,
+      "latency_s": 1.352,
+      "cost_usd": 7.82e-05,
+      "error": null
+    },
+    {
+      "id": "other-09",
+      "tags": [
+        "ambiguous"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.97,
+      "attempts": 1,
+      "input_tokens": 396,
+      "output_tokens": 116,
+      "latency_s": 1.653,
+      "cost_usd": 9.76e-05,
+      "error": null
+    },
+    {
+      "id": "other-10",
+      "tags": [
+        "clear",
+        "english"
+      ],
+      "expected": "other",
+      "predicted": "other",
+      "correct": true,
+      "status": "ok",
+      "confidence": 0.96,
+      "attempts": 1,
+      "input_tokens": 394,
+      "output_tokens": 87,
+      "latency_s": 1.584,
+      "cost_usd": 8.29e-05,
+      "error": null
+    }
+  ]
+}

@@ -102,6 +102,7 @@ def run(cases: list[dict], provider, prompt, guardrails: bool, delay: float) -> 
             "category": result.response.category,
             "confidence": result.response.confidence,
             "answer": result.response.answer,
+            "actions": result.response.actions,
             "error": result.error,
         })
     return rows
