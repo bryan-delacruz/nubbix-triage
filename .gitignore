@@ -18,3 +18,5 @@ evals/results/*_limit*.json
 
 # Caché local de respuestas (se regenera sola)
 data/cache/
+.coverage
+.pytest_cache/

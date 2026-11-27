@@ -1,0 +1,12 @@
+# Configuración de herramientas de desarrollo. El proyecto se instala con requirements.txt.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+# Los bloques "if __name__ == '__main__'" son demos manuales de cada módulo, no lógica del servicio.
+exclude_also = ['if __name__ == "__main__":']
