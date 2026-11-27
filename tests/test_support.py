@@ -86,6 +86,7 @@ def test_build_record_fields():
     assert record["cost_usd"] == pytest.approx((1000 * 0.10 + 100 * 0.50) / 1_000_000)
     assert record["cache_hit"] is False
     assert {"timestamp", "price_input_per_mtok", "prices_verified_on"} <= record.keys()
+    assert record["prices_verified_on"] == "2026-11-26"  # la fecha es la del modelo, no una global
 
 
 def test_build_record_unknown_model_has_no_price():
@@ -94,6 +95,7 @@ def test_build_record_unknown_model_has_no_price():
         category=None, input_tokens=1, output_tokens=1, latency_s=0,
     )
     assert record["cost_usd"] is None and record["price_input_per_mtok"] is None
+    assert record["prices_verified_on"] is None
 
 
 def test_log_request_appends(tmp_path):

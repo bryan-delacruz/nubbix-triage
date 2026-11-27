@@ -17,7 +17,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.pricing import PRICES, PRICES_VERIFIED_ON, estimate_cost
+from src.pricing import PRICES, estimate_cost
 
 METRICS_PATH = Path(__file__).resolve().parent.parent / "data" / "metrics.jsonl"
 
@@ -52,7 +52,7 @@ def build_record(
         "cost_usd": estimate_cost(model, input_tokens, output_tokens),
         "price_input_per_mtok": price.input_per_mtok if price else None,
         "price_output_per_mtok": price.output_per_mtok if price else None,
-        "prices_verified_on": PRICES_VERIFIED_ON,
+        "prices_verified_on": price.verified_on if price else None,
     }
 
 

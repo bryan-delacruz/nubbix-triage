@@ -44,26 +44,26 @@ Fuente: [`evals/results/dataset_anthropic_v1.json`](../evals/results/dataset_ant
 - Las etiquetas las propuso el asistente de IA, sin una segunda revisión independiente; en los casos ambiguos otra persona podría decidir distinto (ver el campo `note` del dataset).
 - 2 casos (`account-09`, `technical-09`) se parecen a reglas de desempate de v2. Sin ellos, v2 sigue ganando: 97,4 % contra 92,1 %.
 
-## Mismo prompt, 2 modelos
+## Mismo prompt, 3 modelos
 
-| Métrica | Haiku 5.5 · v1 | Haiku 5.5 · v2 | Gemini 3.1 Flash-Lite · v1 | Gemini 3.1 Flash-Lite · v2 |
-|---|---|---|---|---|
-| **Accuracy global** | 90,0 % | **97,5 %** | 92,5 % | **97,5 %** |
-| Casos ambiguos (n=5) | 60 % | 100 % | 60 % | 80 % |
-| JSON válido | 100 % | 100 % | 100 % | 100 % |
-| Confianza media en aciertos / errores | 0,75 / 0,66 | 0,86 / 0,70 | 0,98 / 0,98 | 0,93 / 0,95 |
-| Latencia mediana / máxima | 3,2 s / 4,7 s | 2,4 s / 4,6 s | 1,3 s / 32,3 s | 3,9 s / 15,8 s |
-| Tokens por ticket (entrada / salida) | 561 / 536 | 1.864 / 421 | 358 / 157 | 1.166 / 109 |
-| Costo por ticket a precio pago | $0,00032 | $0,00040 | $0,00033 | $0,00046 |
-| Costo real de la corrida | $0,013 | $0,016 | $0 (capa gratuita) | $0 (capa gratuita) |
+| Métrica | Haiku 5.5 · v1 | Haiku 5.5 · v2 | Gemini 3.1 Flash-Lite · v1 | Gemini 3.1 Flash-Lite · v2 | GPT-6 Luna · v1 | GPT-6 Luna · v2 |
+|---|---|---|---|---|---|---|
+| **Accuracy global** | 90,0 % | **97,5 %** | 92,5 % | **97,5 %** | 95,0 % | **100 %** |
+| Casos ambiguos (n=5) | 60 % | 100 % | 60 % | 80 % | 80 % | 100 % |
+| JSON válido | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % |
+| Confianza media en aciertos / errores | 0,75 / 0,66 | 0,86 / 0,70 | 0,98 / 0,98 | 0,93 / 0,95 | 0,95 / 0,97 | 0,91 / sin errores |
+| Latencia mediana / máxima | 3,2 s / 4,7 s | 2,4 s / 4,6 s | 1,3 s / 32,3 s | 3,7 s / 15,8 s | 1,9 s / 4,5 s | 1,5 s / 2,8 s |
+| Tokens por ticket (entrada / salida) | 561 / 536 | 1.864 / 421 | 358 / 157 | 1.166 / 109 | 394 / 118 | 1.168 / 101 |
+| Costo por ticket a precio pago | $0,00032 | $0,00040 | $0,00033 | $0,00046 | $0,00010 | $0,00017 |
+| Costo real de la corrida | $0,013 | $0,016 | $0 (capa gratuita) | $0 (capa gratuita) | $0,004 | $0,007 |
 
-Fuente: los 4 archivos de [`evals/results/`](../evals/results/). Gemini se corrió con `--delay 4`; sin esa espera, una primera corrida tuvo 7 de 80 requests rechazados por la API, consistentes con el rate limit de la capa gratuita.
+Fuente: los 6 archivos `dataset_*` de [`evals/results/`](../evals/results/). GPT-6 Luna se corrió el 2026-11-26 con `OPENAI_REASONING_EFFORT=none`, así que no gasta tokens de razonamiento. Gemini se corrió con `--delay 4`; sin esa espera, una primera corrida tuvo 7 de 80 requests rechazados por la API, consistentes con el rate limit de la capa gratuita.
 
 **Lectura:**
-- **Calidad:** con v2 los 2 modelos empatan en 97,5 %. v2 mejora a los 2, lo que confirma que la mejora viene del prompt y no del modelo.
-- **Costo pagando:** Haiku con v2 es 13 % más barato por ticket. Cada modelo cuenta tokens con su propio tokenizador (el mismo prompt v1 son 561 tokens en Haiku y 358 en Gemini), así que el costo solo se puede comparar midiendo, no estimando con los precios por token.
+- **Calidad:** con v2, Haiku y Gemini empatan en 97,5 % y GPT-6 Luna llega a 100 %. Es 1 caso de diferencia (Haiku falló `technical-04`, el error 403 discutible; Gemini falló `account-10`), así que no es una ventaja fuerte. v2 mejora a los 3, lo que confirma que la mejora viene del prompt y no del modelo.
+- **Costo pagando:** GPT-6 Luna con v2 cuesta $0,00017 por ticket, 58 % menos que Haiku ($0,00040). Tiene el mismo precio por token que Haiku, pero usa 37 % menos tokens de entrada y 76 % menos de salida. Entre Haiku y Gemini, Haiku es 13 % más barato. Cada modelo cuenta tokens con su propio tokenizador (el mismo prompt v1 son 561 tokens en Haiku y 358 en Gemini), así que el costo solo se puede comparar midiendo, no estimando con los precios por token.
 - **Costo en pruebas:** Gemini es gratis.
-- **Confianza:** la de Haiku separa aciertos de errores. La de Gemini no sirve: puso 0,98 también en sus errores.
-- **Latencia:** Haiku es estable. En la capa gratuita, Gemini tuvo picos de 15 a 32 segundos, probablemente por los reintentos automáticos del SDK ante el rate limit.
+- **Confianza:** la de Haiku separa aciertos de errores. La de Gemini no sirve: puso 0,98 también en sus errores. La de GPT-6 Luna tampoco: con v1 puso 0,97 en sus 2 errores, más que en los aciertos. Con v2 no tuvo errores, así que no se puede medir.
+- **Latencia:** GPT-6 Luna es el más rápido y el más estable (máximo 2,8 s). Haiku también es estable. En la capa gratuita, Gemini tuvo picos de 15 a 32 segundos, probablemente por los reintentos automáticos del SDK ante el rate limit.
 
-**Recomendación:** prompt v2 con Haiku 5.5 para producción (más barato pagando, confianza útil, latencia estable). Gemini con la capa gratuita para desarrollo y pruebas.
+**Recomendación:** prompt v2 con GPT-6 Luna para producción (el más barato pagando, el más rápido y el mejor en la suite adversarial). Haiku 5.5 si el equipo va a priorizar tickets por `confidence`. Gemini con la capa gratuita para desarrollo y pruebas.
