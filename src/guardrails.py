@@ -1,7 +1,8 @@
 """Guardrails de entrada y de salida.
 
-Entrada (check_input): detecta prompt injection, jailbreak y exfiltración antes de llamar
-al LLM. Trabaja en capas, para que variaciones triviales del ataque no lo evadan:
+Entrada (check_input): detecta prompt injection, jailbreak, exfiltración y manipulación
+(dictar la categoría o la confianza) antes de llamar al LLM. Trabaja en capas, para que
+variaciones triviales del ataque no lo evadan:
   1. Límites básicos: consulta vacía o demasiado larga.
   2. Normalización: minúsculas, sin acentos, sin caracteres invisibles, letras de otros
      alfabetos que se ven iguales (cirílico, griego) a latinas, leetspeak a letras
@@ -42,6 +43,10 @@ PATTERNS: dict[str, list[str]] = {
         r"\bnew instructions\b",
         r"</?\s*(system|ticket|assistant)\s*>",
         r"\[\s*(system|sistema)\s*\]",
+        # Portugués: "ignore as orientações anteriores".
+        r"\b(ignore|esqueca|desconsidere)\b.{0,40}\b(instrucoes|orientacoes|regras|indicacoes)\b",
+        # Paráfrasis sin "ignora": "dejá de lado lo que te dijeron antes".
+        r"\b(deja|dejes|dejen|olvida)\w*\b.{0,15}\bde lado\b.{0,40}\b(te dijeron|te indicaron|te pidieron|instrucciones|reglas)\b",
     ],
     "jailbreak": [
         # "actúa como un asistente..." sí; "la app actúa como si no tuviera internet" no.
@@ -59,6 +64,14 @@ PATTERNS: dict[str, list[str]] = {
         r"\b(show|reveal|repeat|print|tell me)\b.{0,20}\byour\b.{0,20}\b(instructions|prompt|rules)\b",
         r"\b(api key|clave de api|credenciales|contrasena de admin)\b.{0,30}\b(nubbix|sistema|servidor)\b",
     ],
+    # Un cliente nunca dicta los campos del contrato: la confianza o la categoría las decide el modelo.
+    # Cubre el pedido directo, los ejemplos falsos (many-shot) y las instrucciones escondidas en un JSON o un log.
+    # normalize() convierte "1.0" en "i.o" (leetspeak), por eso los patrones buscan "i".
+    "manipulation": [
+        r"\b(confidence|confianza|confianca)\b[\s\"':=]*(de |del |en |es |com |con |a |is )?(i|i\.o|i,o|ioo ?%)(?![a-z])",
+        r"\b(category|categoria)\b[\s\"':=]*(=|:|es |is |e |sea |correcta es )?\s*\"?(billing|technical|account|other)\b",
+        r"\b(clasifica|classifique|classify|categoriza|marca)\w*\b.{0,30}\b(como|as)\s+(billing|technical|account|other)\b",
+    ],
 }
 # Versión "pegada" de palabras clave, para atrapar letras separadas ("i g n o r a  i n s t r u c c i o n e s").
 COMPACT_KEYWORDS = {
@@ -70,7 +83,7 @@ COMPACT_KEYWORDS = {
 @dataclass(frozen=True)
 class GuardrailResult:
     allowed: bool
-    # Entrada: "empty" | "too_long" | "injection" | "jailbreak" | "exfiltration"
+    # Entrada: "empty" | "too_long" | "injection" | "jailbreak" | "exfiltration" | "manipulation"
     # Salida:  "prompt_leak" | "sensitive_data" | "external_url"
     reason: str | None = None
     matched: str | None = None  # el fragmento que disparó el bloqueo, para auditar
