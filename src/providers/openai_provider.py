@@ -15,6 +15,8 @@ MAX_RETRIES = 2  # reintentos además de la llamada inicial; el SDK reintenta 40
 # razona. Se puede subir con OPENAI_REASONING_EFFORT si las evals lo justifican.
 DEFAULT_REASONING_EFFORT = "none"
 REASONING_EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+# Códigos de error que OpenAI devuelve con HTTP 429 cuando la cuenta no tiene saldo.
+NO_CREDIT_CODES = ("insufficient_quota", "credit_balance_exhausted")
 
 
 class OpenAIProvider(LLMProvider):
@@ -47,6 +49,9 @@ class OpenAIProvider(LLMProvider):
                 store=False,  # no guardar los tickets de clientes en los servidores de OpenAI
             )
         except openai.APIStatusError as error:
+            # OpenAI usa el mismo 429 para "sin créditos" y para "rate limit": el campo code los distingue.
+            if error.code in NO_CREDIT_CODES:
+                raise LLMError(self.name, "La cuenta de OpenAI no tiene créditos. Carga saldo en Billing (HTTP 429)") from error
             raise LLMError(self.name, f"{describe_status(error.status_code)} (HTTP {error.status_code})") from error
         except openai.APIConnectionError as error:
             raise LLMError(self.name, f"No se pudo conectar con la API: {type(error).__name__}") from error
